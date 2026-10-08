@@ -1,8 +1,8 @@
 class_name WorldGrid
 extends Node2D
 
-@export var normal_color: Color = Color(1.0, 1.0, 1.0, 0.05)
-@export var chunk_color: Color = Color(1.0, 1.0, 1.0, 0.15)
+@export var normal_color: Color = Color(0.0, 0.0, 0.0, 0.2)
+@export var chunk_color: Color = Color(0.0, 0.0, 0.0, 0.4)
 @export var chunk_size: int = 10
 
 func _process(_delta: float) -> void:

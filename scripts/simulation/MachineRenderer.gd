@@ -13,6 +13,31 @@ func _draw_direction_arrow(center: Vector2, dir: GridSettings.Direction, size: f
 	draw_line(start, end, color, 3.0)
 	draw_circle(end, 3.0, color)
 
+func _draw_metal_panel(rect: Rect2, base_color: Color) -> void:
+	draw_rect(rect, base_color, true)
+	
+	# Biselado (Luz y Sombra) para dar volumen
+	var thickness = 3.0
+	var light = Color.WHITE.blend(base_color).lightened(0.3)
+	var dark = Color.BLACK.blend(base_color).darkened(0.5)
+	
+	draw_line(rect.position, rect.position + Vector2(rect.size.x, 0), light, thickness)
+	draw_line(rect.position, rect.position + Vector2(0, rect.size.y), light, thickness)
+	draw_line(rect.position + Vector2(0, rect.size.y), rect.position + rect.size, dark, thickness)
+	draw_line(rect.position + Vector2(rect.size.x, 0), rect.position + rect.size, dark, thickness)
+	
+	# Remaches
+	var inset = 6.0
+	var c_col = Color(0.1, 0.1, 0.1)
+	for corner in [
+		rect.position + Vector2(inset, inset),
+		rect.position + Vector2(rect.size.x - inset, inset),
+		rect.position + Vector2(inset, rect.size.y - inset),
+		rect.position + Vector2(rect.size.x - inset, rect.size.y - inset)
+	]:
+		draw_circle(corner, 2.0, c_col)
+		draw_circle(corner + Vector2(0.5, 0.5), 1.0, Color.GRAY)
+
 func _draw_rotating_rect(center: Vector2, size: float, angle: float, color: Color, outline: bool = false) -> void:
 	var p1 = center + Vector2(-size, -size).rotated(angle)
 	var p2 = center + Vector2(size, -size).rotated(angle)
@@ -42,7 +67,7 @@ func _draw() -> void:
 		var center = GridSettings.grid_to_world(drill.grid_position)
 		var m_center = center + Vector2(cell_size/2, cell_size/2)
 		var color = Color(0.6, 0.6, 0.1) if drill.is_working else Color.DARK_RED
-		draw_rect(Rect2(center, Vector2(cell_size, cell_size)), color, true)
+		_draw_metal_panel(Rect2(center, Vector2(cell_size, cell_size)), color)
 		
 		# Animación: Cuchilla extractora girando
 		var rot_angle = time * PI * 4.0 if drill.is_working else 0.0
@@ -55,7 +80,7 @@ func _draw() -> void:
 		var center = GridSettings.grid_to_world(smelter.grid_position)
 		var m_center = center + Vector2(cell_size/2, cell_size/2)
 		var color = Color.CORAL.darkened(0.3) if smelter.is_working else Color.DIM_GRAY
-		draw_rect(Rect2(center, Vector2(cell_size, cell_size)), color, true)
+		_draw_metal_panel(Rect2(center, Vector2(cell_size, cell_size)), color)
 		
 		# Animación: Núcleo incandescente palpitando
 		if smelter.is_working:
@@ -74,7 +99,7 @@ func _draw() -> void:
 	for chest in main_node.chests:
 		var center = GridSettings.grid_to_world(chest.grid_position)
 		var m_center = center + Vector2(cell_size/2, cell_size/2)
-		draw_rect(Rect2(center, Vector2(cell_size, cell_size)), Color.FOREST_GREEN.darkened(0.2), true)
+		_draw_metal_panel(Rect2(center, Vector2(cell_size, cell_size)), Color.FOREST_GREEN.darkened(0.2))
 		
 		# Detalle: Tapa superior metálica
 		var inner = cell_size * 0.7
@@ -86,13 +111,13 @@ func _draw() -> void:
 	for splitter in main_node.splitters:
 		var center = GridSettings.grid_to_world(splitter.grid_position)
 		var m_center = center + Vector2(cell_size/2, cell_size/2)
-		draw_rect(Rect2(center, Vector2(cell_size, cell_size)), Color.CYAN.darkened(0.4), true)
+		_draw_metal_panel(Rect2(center, Vector2(cell_size, cell_size)), Color.CYAN.darkened(0.4))
 		_draw_direction_arrow(m_center, splitter.direction, cell_size, Color.CYAN)
 		
 	for merger in main_node.mergers:
 		var center = GridSettings.grid_to_world(merger.grid_position)
 		var m_center = center + Vector2(cell_size/2, cell_size/2)
-		draw_rect(Rect2(center, Vector2(cell_size, cell_size)), Color.MAGENTA.darkened(0.4), true)
+		_draw_metal_panel(Rect2(center, Vector2(cell_size, cell_size)), Color.MAGENTA.darkened(0.4))
 		_draw_direction_arrow(m_center, merger.direction, cell_size, Color.MAGENTA)
 		
 	for assembler in main_node.assemblers:
@@ -101,7 +126,7 @@ func _draw() -> void:
 		var m_center = top_left + pixel_size / 2.0
 		
 		var color = Color.ROYAL_BLUE.darkened(0.4) if assembler.is_working else Color.DARK_BLUE
-		draw_rect(Rect2(top_left, pixel_size), color, true)
+		_draw_metal_panel(Rect2(top_left, pixel_size), color)
 		
 		# Animación: Gran engranaje central girando
 		var rot_angle = -time * PI * 1.5 if assembler.is_working else 0.0
@@ -109,7 +134,6 @@ func _draw() -> void:
 		_draw_rotating_rect(m_center, cell_size * 0.8, rot_angle + PI/4.0, Color.CORNFLOWER_BLUE)
 		draw_circle(m_center, cell_size * 0.5, Color.DARK_SLATE_BLUE)
 		
-		draw_rect(Rect2(top_left, pixel_size), Color.LIGHT_BLUE, false, 2.0)
 		draw_string(default_font, top_left + Vector2(10, 20), "ENSAMBLADORA", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color.WHITE)
 		_draw_direction_arrow(m_center, assembler.direction, cell_size * 1.5, Color.WHITE)
 		
@@ -129,7 +153,7 @@ func _draw() -> void:
 		var pixel_size = Vector2(lab.current_size.x * cell_size, lab.current_size.y * cell_size)
 		var m_center = top_left + pixel_size / 2.0
 		var color = Color.PURPLE.darkened(0.5)
-		draw_rect(Rect2(top_left, pixel_size), color, true)
+		_draw_metal_panel(Rect2(top_left, pixel_size), color)
 		
 		# Animación: Domo de energía
 		if lab.is_working:
@@ -139,7 +163,6 @@ func _draw() -> void:
 		else:
 			draw_circle(m_center, cell_size * 0.4, Color.DARK_PURPLE)
 			
-		draw_rect(Rect2(top_left, pixel_size), Color.ORCHID, false, 2.0)
 		draw_string(default_font, top_left + Vector2(10, 20), "LABORATORIO", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color.WHITE)
 
 	for ins in main_node.inserters:

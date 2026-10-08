@@ -27,12 +27,17 @@ func _draw() -> void:
 		var belt_rect = Rect2(center_pos - Vector2(half_size, half_size), Vector2(cell_size, cell_size))
 		draw_rect(belt_rect, Color(0.15, 0.15, 0.15), true)
 		
-		# 1.5 DIBUJAR RAÍLES LATERALES (Metálicos)
+		# 1.5 DIBUJAR RAÍLES LATERALES Y RODILLOS (Metálicos)
 		var ortho = Vector2(-dir_vec.y, dir_vec.x) * (half_size - 1.0)
 		var p_back = center_pos - pixel_dir
 		var p_front = center_pos + pixel_dir
 		draw_line(p_back + ortho, p_front + ortho, Color(0.4, 0.4, 0.4), 2.0)
 		draw_line(p_back - ortho, p_front - ortho, Color(0.4, 0.4, 0.4), 2.0)
+		
+		# Rodillos
+		for i in range(-2, 3):
+			var roller_pos = center_pos + dir_vec * (i * (cell_size / 6.0))
+			draw_line(roller_pos + ortho * 0.8, roller_pos - ortho * 0.8, Color(0.1, 0.1, 0.1), 3.0)
 		
 		# 2. DIBUJAR FLECHAS ANIMADAS (Chevrons)
 		# Creamos una ilusión de scroll usando módulo

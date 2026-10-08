@@ -39,6 +39,9 @@ var player_inventory: Dictionary = {}
 var build_costs: Dictionary = {}
 
 func _ready() -> void:
+	var ground = GroundRenderer.new()
+	add_child(ground)
+	
 	cursor.main_node = self
 	machine_renderer.main_node = self
 	
