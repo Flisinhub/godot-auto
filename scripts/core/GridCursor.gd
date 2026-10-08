@@ -81,5 +81,9 @@ func _draw_ghost(rect: Rect2, base_color: Color, mode: int, dir: GridSettings.Di
 		9: # LABORATORY
 			draw_rect(rect, Color(0.5, 0.0, 0.5, 0.3), true)
 			draw_circle(center, 10.0, Color(1, 1, 1, 0.5))
+		10: # INSERTER
+			draw_rect(rect, Color(1.0, 1.0, 0.0, 0.3), true)
+			draw_line(center - dir_vec * (half * 0.8), center + dir_vec * (half * 0.8), Color.WHITE, 3.0)
+			draw_circle(center + dir_vec * (half * 0.8), 4.0, Color.YELLOW)
 		_:
 			draw_rect(rect, base_color, true)

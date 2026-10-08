@@ -21,6 +21,7 @@ var splitters: Array[Splitter] = []
 var mergers: Array[Merger] = []
 var assemblers: Array[Assembler] = []
 var laboratories: Array[Laboratory] = []
+var inserters: Array[Inserter] = []
 
 var all_recipes: Array[RecipeData] = []
 var machine_ui: MachineUI
@@ -96,6 +97,7 @@ func _setup_materials_and_recipes() -> void:
 	build_costs[BuildToolbar.BuildMode.MERGER] = {iron_ingot: 3, iron_gear: 2}
 	build_costs[BuildToolbar.BuildMode.ASSEMBLER] = {iron_ingot: 15, iron_gear: 10}
 	build_costs[BuildToolbar.BuildMode.LABORATORY] = {iron_ingot: 20, copper_ingot: 10, iron_gear: 15}
+	build_costs[BuildToolbar.BuildMode.INSERTER] = {iron_ingot: 5, iron_gear: 5}
 	
 	# === ÁRBOL DE TECNOLOGÍAS ===
 	tech_manager.register_tech("logistics_1", "Logistica Básica", "Desbloquea Divisores y Uniones.", {iron_gear: 10})
@@ -118,6 +120,7 @@ func _on_simulation_ticked() -> void:
 	for merger in mergers: merger.process_tick()
 	for assembler in assemblers: assembler.process_tick()
 	for lab in laboratories: lab.process_tick()
+	for ins in inserters: ins.process_tick()
 	
 	machine_renderer.queue_redraw()
 	belt_renderer.queue_redraw()
@@ -138,6 +141,7 @@ func _input(event: InputEvent) -> void:
 			KEY_7: current_mode = BuildToolbar.BuildMode.MERGER
 			KEY_8: current_mode = BuildToolbar.BuildMode.ASSEMBLER
 			KEY_9: current_mode = BuildToolbar.BuildMode.LABORATORY
+			KEY_0: current_mode = BuildToolbar.BuildMode.INSERTER
 			KEY_T: tech_ui.toggle_ui()
 			KEY_R: current_rotation = (current_rotation + 1) % 4 as GridSettings.Direction
 			KEY_F9: SaveLoadSystem.save_game(self)
@@ -167,6 +171,7 @@ func _update_ui_text() -> void:
 		BuildToolbar.BuildMode.MERGER: mode_name = "UNION"
 		BuildToolbar.BuildMode.ASSEMBLER: mode_name = "ENSAMBLADORA 3x3"
 		BuildToolbar.BuildMode.LABORATORY: mode_name = "LABORATORIO 2x2"
+		BuildToolbar.BuildMode.INSERTER: mode_name = "BRAZO ROBOTICO (Inserter)"
 		
 	var cost_text = "Coste: Gratis"
 	if build_costs.has(current_mode):
@@ -178,7 +183,7 @@ func _update_ui_text() -> void:
 	for item in player_inventory.keys():
 		inv_text += item.item_name + ": " + str(player_inventory[item]) + "\n"
 
-	ui_label.text = "Modo: %s\n\n%s\n%s\nCONTROLES:\nESC: Select/Loot | 1-9: Construir\nT: Arbol Tecnología | 5: Demoler\nR: Rotar | F9/F10: Guardar" % [mode_name, cost_text, inv_text]
+	ui_label.text = "Modo: %s\n\n%s\n%s\nCONTROLES:\nESC: Select/Loot | 1-0: Construir\nT: Arbol Tecnología | 5: Demoler\nR: Rotar | F9/F10: Guardar" % [mode_name, cost_text, inv_text]
 
 func _can_afford(mode: BuildToolbar.BuildMode) -> bool:
 	if mode == BuildToolbar.BuildMode.SPLITTER or mode == BuildToolbar.BuildMode.MERGER:
@@ -208,6 +213,7 @@ func _refund_cost_for_entity(entity: Variant) -> void:
 	elif entity is Merger: mode = BuildToolbar.BuildMode.MERGER
 	elif entity is Assembler: mode = BuildToolbar.BuildMode.ASSEMBLER
 	elif entity is Laboratory: mode = BuildToolbar.BuildMode.LABORATORY
+	elif entity is Inserter: mode = BuildToolbar.BuildMode.INSERTER
 	
 	if build_costs.has(mode):
 		var cost = build_costs[mode]
@@ -301,6 +307,13 @@ func _handle_click(mouse_pos: Vector2) -> void:
 				_reconnect_adjacent_area(grid_pos, size)
 				_pay_cost(current_mode)
 				
+		BuildToolbar.BuildMode.INSERTER:
+			var ins = Inserter.new(grid_pos, current_rotation, self)
+			if grid_manager.occupy_cell(grid_pos, ins):
+				inserters.append(ins)
+				# No necesitamos re-conectar nada porque el inserter busca en tiempo real
+				_pay_cost(current_mode)
+				
 		BuildToolbar.BuildMode.DEMOLISH:
 			var entity = grid_manager.get_entity_at(grid_pos)
 			if entity == null: return
@@ -328,6 +341,10 @@ func _handle_click(mouse_pos: Vector2) -> void:
 			elif entity is Merger: mergers.erase(entity)
 			elif entity is Assembler: assemblers.erase(entity)
 			elif entity is Laboratory: laboratories.erase(entity)
+			elif entity is Inserter:
+				if entity.held_item != null:
+					player_inventory[entity.held_item] = player_inventory.get(entity.held_item, 0) + 1
+				inserters.erase(entity)
 			
 			_refund_cost_for_entity(entity)
 			_update_ui_text()

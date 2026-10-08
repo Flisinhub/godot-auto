@@ -141,3 +141,26 @@ func _draw() -> void:
 			
 		draw_rect(Rect2(top_left, pixel_size), Color.ORCHID, false, 2.0)
 		draw_string(default_font, top_left + Vector2(10, 20), "LABORATORIO", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color.WHITE)
+
+	for ins in main_node.inserters:
+		var center = GridSettings.grid_to_world(ins.grid_position)
+		var m_center = center + Vector2(cell_size/2, cell_size/2)
+		var dir_vec = Vector2(GridSettings.get_direction_vector(ins.direction))
+		
+		# Base rotatoria del Inserter
+		draw_circle(m_center, cell_size * 0.25, Color.DARK_GOLDENROD)
+		draw_circle(m_center, cell_size * 0.1, Color.BLACK)
+		
+		var target_pos = m_center + dir_vec * (cell_size * 0.6)
+		var source_pos = m_center - dir_vec * (cell_size * 0.6)
+		
+		# El brazo apunta al target si tiene objeto, o al source si está buscando
+		var arm_pos = target_pos if ins.held_item != null else source_pos
+		
+		draw_line(m_center, arm_pos, Color.ORANGE, 4.0)
+		draw_circle(arm_pos, 4.0, Color.YELLOW)
+		
+		# Dibujar el objeto que tiene agarrado
+		if ins.held_item != null and ins.held_item.texture != null:
+			var item_rect = Rect2(arm_pos - Vector2(8, 8), Vector2(16, 16))
+			draw_texture_rect(ins.held_item.texture, item_rect, false)

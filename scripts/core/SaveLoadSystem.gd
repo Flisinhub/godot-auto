@@ -7,6 +7,7 @@ static func save_game(main: Main) -> void:
 	var data: Dictionary = {
 		"belts": [], "drills": [], "smelters": [],
 		"chests": [], "splitters": [], "mergers": [], "assemblers": [], "laboratories": [],
+		"inserters": [],
 		"player_inventory": {},
 		"unlocked_techs": main.tech_manager.unlocked_techs,
 		"active_research": main.tech_manager.active_research,
@@ -21,6 +22,10 @@ static func save_game(main: Main) -> void:
 	for merger in main.mergers: data.mergers.append({"x": merger.grid_position.x, "y": merger.grid_position.y, "dir": merger.direction})
 	for assembler in main.assemblers: data.assemblers.append({"x": assembler.grid_position.x, "y": assembler.grid_position.y, "dir": assembler.direction})
 	for lab in main.laboratories: data.laboratories.append({"x": lab.grid_position.x, "y": lab.grid_position.y, "dir": lab.direction})
+	
+	for ins in main.inserters:
+		var held = ins.held_item.id if ins.held_item != null else ""
+		data.inserters.append({"x": ins.grid_position.x, "y": ins.grid_position.y, "dir": ins.direction, "held": held})
 		
 	for item in main.player_inventory.keys():
 		data.player_inventory[item.id] = main.player_inventory[item]
@@ -52,6 +57,7 @@ static func load_game(main: Main) -> void:
 	main.mergers.clear()
 	main.assemblers.clear()
 	main.laboratories.clear()
+	main.inserters.clear()
 	main.simulation._belts.clear()
 	main.player_inventory.clear()
 	
@@ -117,6 +123,14 @@ static func load_game(main: Main) -> void:
 			var lab = Laboratory.new(Vector2i(int(l.x), int(l.y)), main.tech_manager)
 			main.grid_manager.occupy_area(lab.grid_position, size, lab)
 			main.laboratories.append(lab)
+			
+	if data.has("inserters"):
+		for i_data in data.inserters:
+			var ins = Inserter.new(Vector2i(int(i_data.x), int(i_data.y)), int(i_data.dir) as GridSettings.Direction, main)
+			if i_data.has("held") and i_data.held != "":
+				ins.held_item = main._get_item_by_id(i_data.held)
+			main.grid_manager.occupy_cell(ins.grid_position, ins)
+			main.inserters.append(ins)
 			
 	if data.has("player_inventory"):
 		for item_id in data.player_inventory.keys():

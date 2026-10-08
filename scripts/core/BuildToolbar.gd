@@ -13,7 +13,8 @@ enum BuildMode {
 	SPLITTER = 6,
 	MERGER = 7,
 	ASSEMBLER = 8,
-	LABORATORY = 9
+	LABORATORY = 9,
+	INSERTER = 10
 }
 
 func _input(event: InputEvent) -> void:
