@@ -12,6 +12,7 @@ var grid_manager: GridManager = GridManager.new()
 @onready var machine_renderer: Node2D = $MachineRenderer
 @onready var belt_renderer: BeltRenderer = $BeltRenderer
 @onready var cursor: GridCursor = $GridCursor
+@onready var camera: CameraController = $CameraController
 
 var drills: Array[MiningDrill] = []
 var smelters: Array[Smelter] = []

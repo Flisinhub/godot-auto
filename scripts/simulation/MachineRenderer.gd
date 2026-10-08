@@ -219,7 +219,7 @@ func _draw() -> void:
 			draw_circle(m_center, (cell_size * 0.8) * pulse, Color(0.8, 0.2, 1.0, 1.0 - pulse) * 1.5)
 			draw_circle(m_center, cell_size * 0.4, Color.MEDIUM_PURPLE * 2.0)
 		else:
-			draw_circle(m_center, cell_size * 0.4, Color.DARK_PURPLE)
+			draw_circle(m_center, cell_size * 0.4, Color.PURPLE.darkened(0.6))
 			
 		draw_string(default_font, top_left + Vector2(10, 20), "LABORATORIO", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color.WHITE)
 

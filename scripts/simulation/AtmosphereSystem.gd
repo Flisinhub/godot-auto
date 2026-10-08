@@ -18,10 +18,6 @@ func _ready() -> void:
 	
 	# Configurar Glow para las luces y hornos calientes
 	env.glow_enabled = true
-	env.glow_levels/1 = 1.0
-	env.glow_levels/2 = 1.0
-	env.glow_levels/3 = 1.0
-	env.glow_levels/5 = 0.0
 	env.glow_blend_mode = Environment.GLOW_BLEND_MODE_ADDITIVE
 	env.glow_intensity = 0.8
 	env.glow_strength = 1.2
