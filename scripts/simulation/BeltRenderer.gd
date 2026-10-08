@@ -25,9 +25,16 @@ func _draw() -> void:
 		
 		# 1. DIBUJAR LA CINTA BASE (Fondo)
 		var belt_rect = Rect2(center_pos - Vector2(half_size, half_size), Vector2(cell_size, cell_size))
-		draw_rect(belt_rect, Color(0.15, 0.15, 0.15), true) # Gris muy oscuro
+		draw_rect(belt_rect, Color(0.15, 0.15, 0.15), true)
 		
-		# 2. DIBUJAR FLECHAS ANIMADAS (Chevrons de goma)
+		# 1.5 DIBUJAR RAÍLES LATERALES (Metálicos)
+		var ortho = Vector2(-dir_vec.y, dir_vec.x) * (half_size - 1.0)
+		var p_back = center_pos - pixel_dir
+		var p_front = center_pos + pixel_dir
+		draw_line(p_back + ortho, p_front + ortho, Color(0.4, 0.4, 0.4), 2.0)
+		draw_line(p_back - ortho, p_front - ortho, Color(0.4, 0.4, 0.4), 2.0)
+		
+		# 2. DIBUJAR FLECHAS ANIMADAS (Chevrons)
 		# Creamos una ilusión de scroll usando módulo
 		var speed = 20.0
 		var pattern_spacing = 10.0

@@ -13,7 +13,17 @@ func _draw_direction_arrow(center: Vector2, dir: GridSettings.Direction, size: f
 	draw_line(start, end, color, 3.0)
 	draw_circle(end, 3.0, color)
 
-## Dibuja una pequeña barra de progreso estilo UI sobre la máquina
+func _draw_rotating_rect(center: Vector2, size: float, angle: float, color: Color, outline: bool = false) -> void:
+	var p1 = center + Vector2(-size, -size).rotated(angle)
+	var p2 = center + Vector2(size, -size).rotated(angle)
+	var p3 = center + Vector2(size, size).rotated(angle)
+	var p4 = center + Vector2(-size, size).rotated(angle)
+	if outline:
+		draw_line(p1, p2, color, 2.0); draw_line(p2, p3, color, 2.0)
+		draw_line(p3, p4, color, 2.0); draw_line(p4, p1, color, 2.0)
+	else:
+		draw_polygon(PackedVector2Array([p1, p2, p3, p4]), PackedColorArray([color, color, color, color]))
+
 func _draw_progress_bar(center: Vector2, progress: float, width: float) -> void:
 	var bar_h = 4.0
 	var bg_rect = Rect2(center.x - width/2.0, center.y + width/2.0 - bar_h - 2.0, width, bar_h)
@@ -22,26 +32,39 @@ func _draw_progress_bar(center: Vector2, progress: float, width: float) -> void:
 	draw_rect(fg_rect, Color.GREEN, true)
 
 func _draw() -> void:
-	if main_node == null:
-		return
+	if main_node == null: return
 		
 	var cell_size: float = float(GridSettings.CELL_SIZE)
 	var default_font = ThemeDB.fallback_font
+	var time = float(Time.get_ticks_msec()) / 1000.0
 	
 	for drill in main_node.drills:
 		var center = GridSettings.grid_to_world(drill.grid_position)
-		var color = Color(0.8, 0.8, 0.1) if drill.is_working else Color.DARK_RED
+		var m_center = center + Vector2(cell_size/2, cell_size/2)
+		var color = Color(0.6, 0.6, 0.1) if drill.is_working else Color.DARK_RED
 		draw_rect(Rect2(center, Vector2(cell_size, cell_size)), color, true)
 		
-		var arrow_center = center + Vector2(cell_size/2, cell_size/2)
-		_draw_direction_arrow(arrow_center, drill.direction, cell_size, Color.BLACK)
+		# Animación: Cuchilla extractora girando
+		var rot_angle = time * PI * 4.0 if drill.is_working else 0.0
+		_draw_rotating_rect(m_center, cell_size * 0.35, rot_angle, Color.DARK_GRAY)
+		_draw_rotating_rect(m_center, cell_size * 0.35, rot_angle + PI/4.0, Color.DIM_GRAY)
+		
+		_draw_direction_arrow(m_center, drill.direction, cell_size, Color.BLACK)
 			
 	for smelter in main_node.smelters:
 		var center = GridSettings.grid_to_world(smelter.grid_position)
-		var color = Color.CORAL if smelter.is_working else Color.DIM_GRAY
+		var m_center = center + Vector2(cell_size/2, cell_size/2)
+		var color = Color.CORAL.darkened(0.3) if smelter.is_working else Color.DIM_GRAY
 		draw_rect(Rect2(center, Vector2(cell_size, cell_size)), color, true)
 		
-		var m_center = center + Vector2(cell_size/2, cell_size/2)
+		# Animación: Núcleo incandescente palpitando
+		if smelter.is_working:
+			var pulse = sin(time * 8.0) * 0.2 + 0.8
+			draw_circle(m_center, cell_size * 0.3 * pulse, Color.ORANGE_RED)
+			draw_circle(m_center, cell_size * 0.15 * pulse, Color.YELLOW)
+		else:
+			draw_circle(m_center, cell_size * 0.3, Color.DARK_GRAY)
+			
 		_draw_direction_arrow(m_center, smelter.direction, cell_size, Color.WHITE)
 		
 		if smelter.is_working and smelter.active_recipe != null:
@@ -50,34 +73,44 @@ func _draw() -> void:
 		
 	for chest in main_node.chests:
 		var center = GridSettings.grid_to_world(chest.grid_position)
-		draw_rect(Rect2(center, Vector2(cell_size, cell_size)), Color.FOREST_GREEN, true)
+		var m_center = center + Vector2(cell_size/2, cell_size/2)
+		draw_rect(Rect2(center, Vector2(cell_size, cell_size)), Color.FOREST_GREEN.darkened(0.2), true)
+		
+		# Detalle: Tapa superior metálica
+		var inner = cell_size * 0.7
+		draw_rect(Rect2(m_center - Vector2(inner/2, inner/2), Vector2(inner, inner)), Color.FOREST_GREEN, false, 3.0)
+		
 		var text = str(chest.current_total)
-		var text_pos = center + Vector2(2, 20)
-		draw_string(default_font, text_pos, text, HORIZONTAL_ALIGNMENT_CENTER, -1, 14, Color.WHITE)
+		draw_string(default_font, center + Vector2(2, 20), text, HORIZONTAL_ALIGNMENT_CENTER, -1, 14, Color.WHITE)
 		
 	for splitter in main_node.splitters:
 		var center = GridSettings.grid_to_world(splitter.grid_position)
-		draw_rect(Rect2(center, Vector2(cell_size, cell_size)), Color.CYAN, true)
-		var arrow_center = center + Vector2(cell_size/2, cell_size/2)
-		_draw_direction_arrow(arrow_center, splitter.direction, cell_size, Color.BLACK)
+		var m_center = center + Vector2(cell_size/2, cell_size/2)
+		draw_rect(Rect2(center, Vector2(cell_size, cell_size)), Color.CYAN.darkened(0.4), true)
+		_draw_direction_arrow(m_center, splitter.direction, cell_size, Color.CYAN)
 		
 	for merger in main_node.mergers:
 		var center = GridSettings.grid_to_world(merger.grid_position)
-		draw_rect(Rect2(center, Vector2(cell_size, cell_size)), Color.MAGENTA, true)
-		var arrow_center = center + Vector2(cell_size/2, cell_size/2)
-		_draw_direction_arrow(arrow_center, merger.direction, cell_size, Color.WHITE)
+		var m_center = center + Vector2(cell_size/2, cell_size/2)
+		draw_rect(Rect2(center, Vector2(cell_size, cell_size)), Color.MAGENTA.darkened(0.4), true)
+		_draw_direction_arrow(m_center, merger.direction, cell_size, Color.MAGENTA)
 		
 	for assembler in main_node.assemblers:
 		var top_left = GridSettings.grid_to_world(assembler.grid_position)
 		var pixel_size = Vector2(assembler.current_size.x * cell_size, assembler.current_size.y * cell_size)
-		
-		var color = Color.ROYAL_BLUE if assembler.is_working else Color.DARK_BLUE
-		draw_rect(Rect2(top_left, pixel_size), color, true)
-		draw_rect(Rect2(top_left, pixel_size), Color.LIGHT_BLUE, false, 2.0)
-		
-		draw_string(default_font, top_left + Vector2(10, 20), "ENSAMBLADORA", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color.WHITE)
-		
 		var m_center = top_left + pixel_size / 2.0
+		
+		var color = Color.ROYAL_BLUE.darkened(0.4) if assembler.is_working else Color.DARK_BLUE
+		draw_rect(Rect2(top_left, pixel_size), color, true)
+		
+		# Animación: Gran engranaje central girando
+		var rot_angle = -time * PI * 1.5 if assembler.is_working else 0.0
+		_draw_rotating_rect(m_center, cell_size * 0.8, rot_angle, Color.ROYAL_BLUE)
+		_draw_rotating_rect(m_center, cell_size * 0.8, rot_angle + PI/4.0, Color.CORNFLOWER_BLUE)
+		draw_circle(m_center, cell_size * 0.5, Color.DARK_SLATE_BLUE)
+		
+		draw_rect(Rect2(top_left, pixel_size), Color.LIGHT_BLUE, false, 2.0)
+		draw_string(default_font, top_left + Vector2(10, 20), "ENSAMBLADORA", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color.WHITE)
 		_draw_direction_arrow(m_center, assembler.direction, cell_size * 1.5, Color.WHITE)
 		
 		if assembler.is_working and assembler.active_recipe != null:
@@ -94,8 +127,17 @@ func _draw() -> void:
 	for lab in main_node.laboratories:
 		var top_left = GridSettings.grid_to_world(lab.grid_position)
 		var pixel_size = Vector2(lab.current_size.x * cell_size, lab.current_size.y * cell_size)
-		var color = Color.PURPLE if lab.is_working else Color.DARK_PURPLE
+		var m_center = top_left + pixel_size / 2.0
+		var color = Color.PURPLE.darkened(0.5)
 		draw_rect(Rect2(top_left, pixel_size), color, true)
+		
+		# Animación: Domo de energía
+		if lab.is_working:
+			var pulse = fmod(time * 2.0, 1.0) # 0 to 1 repeatedly
+			draw_circle(m_center, (cell_size * 0.8) * pulse, Color(0.8, 0.2, 1.0, 1.0 - pulse))
+			draw_circle(m_center, cell_size * 0.4, Color.MEDIUM_PURPLE)
+		else:
+			draw_circle(m_center, cell_size * 0.4, Color.DARK_PURPLE)
+			
 		draw_rect(Rect2(top_left, pixel_size), Color.ORCHID, false, 2.0)
 		draw_string(default_font, top_left + Vector2(10, 20), "LABORATORIO", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color.WHITE)
-
