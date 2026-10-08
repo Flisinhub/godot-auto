@@ -10,15 +10,26 @@ var _last_mouse_pos: Vector2
 
 var target_zoom: float = 1.0
 var target_position: Vector2 = Vector2.ZERO
+var shake_intensity: float = 0.0
 
 func _ready() -> void:
 	target_position = position
 	target_zoom = zoom.x
 
+func add_shake(amount: float) -> void:
+	shake_intensity = min(shake_intensity + amount, 20.0)
+
 func _process(delta: float) -> void:
 	# Suavizado cinemático
 	zoom = zoom.lerp(Vector2(target_zoom, target_zoom), 15.0 * delta)
-	position = position.lerp(target_position, 20.0 * delta)
+	
+	# Aplicar Temblor de Pantalla (Screen Shake)
+	var current_target = target_position
+	if shake_intensity > 0.0:
+		current_target += Vector2(randf_range(-1.0, 1.0), randf_range(-1.0, 1.0)) * shake_intensity
+		shake_intensity = lerp(shake_intensity, 0.0, 10.0 * delta)
+		
+	position = position.lerp(current_target, 20.0 * delta)
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton:

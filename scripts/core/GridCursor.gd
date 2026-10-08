@@ -54,6 +54,37 @@ func _draw() -> void:
 	draw_rect(rect, border_color, false, 2.0)
 
 func _draw_ghost(rect: Rect2, base_color: Color, mode: int, dir: GridSettings.Direction) -> void:
+	# Animación de respiración holográfica
+	var t = float(Time.get_ticks_msec()) / 1000.0
+	var pulse = sin(t * 10.0) * 0.1 + 0.9
+	var color = Color(0.2, 0.8, 1.0, 0.5)
+	if mode == 5: # DEMOLISH
+		color = Color(1.0, 0.2, 0.2, 0.5)
+	elif not (base_color == cursor_color):
+		color = Color(1.0, 0.2, 0.2, 0.5) # Color de error (rojo) si no es válido
+		
+	var r_pos = rect.position - Vector2(1,1) * (pulse * 2.0)
+	var r_size = rect.size + Vector2(2,2) * (pulse * 4.0)
+	
+	# Fondo transparente sutil
+	draw_rect(Rect2(r_pos, r_size), Color(color.r, color.g, color.b, 0.15), true)
+	
+	# Dibujar esquinas (brackets)
+	var corner_len = min(8.0, r_size.x * 0.25)
+	var thickness = 2.0
+	
+	draw_line(r_pos, r_pos + Vector2(corner_len, 0), color, thickness)
+	draw_line(r_pos, r_pos + Vector2(0, corner_len), color, thickness)
+	var tr = r_pos + Vector2(r_size.x, 0)
+	draw_line(tr, tr + Vector2(-corner_len, 0), color, thickness)
+	draw_line(tr, tr + Vector2(0, corner_len), color, thickness)
+	var bl = r_pos + Vector2(0, r_size.y)
+	draw_line(bl, bl + Vector2(corner_len, 0), color, thickness)
+	draw_line(bl, bl + Vector2(0, -corner_len), color, thickness)
+	var br = r_pos + r_size
+	draw_line(br, br + Vector2(-corner_len, 0), color, thickness)
+	draw_line(br, br + Vector2(0, -corner_len), color, thickness)
+	
 	var center = rect.get_center()
 	var half = rect.size.x / 2.0
 	var dir_vec = Vector2(GridSettings.get_direction_vector(dir))

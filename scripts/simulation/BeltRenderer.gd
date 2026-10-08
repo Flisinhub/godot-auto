@@ -65,11 +65,14 @@ func _draw() -> void:
 				draw_line(p2, p3, Color(0.3, 0.3, 0.3), 2.0)
 		
 		# 3. DIBUJAR LOS ÍTEMS INTERPOLADOS
+		var bobbing = sin(current_time * 15.0) * 1.5
+		
 		if not belt.is_slot_empty(1):
 			var item: ItemData = belt.get_item(1)
 			var start_pos: Vector2 = center_pos - pixel_dir
 			var end_pos: Vector2 = center_pos
 			var visual_pos: Vector2 = start_pos.lerp(end_pos, tick_progress)
+			visual_pos.y += bobbing
 			_draw_item_centered(visual_pos, item)
 				
 		if not belt.is_slot_empty(0):
@@ -77,6 +80,7 @@ func _draw() -> void:
 			var start_pos: Vector2 = center_pos
 			var end_pos: Vector2 = center_pos + pixel_dir
 			var visual_pos: Vector2 = start_pos.lerp(end_pos, tick_progress)
+			visual_pos.y += bobbing
 			_draw_item_centered(visual_pos, item)
 
 func _draw_item_centered(pos: Vector2, item: ItemData) -> void:

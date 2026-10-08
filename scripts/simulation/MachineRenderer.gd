@@ -4,6 +4,7 @@ extends Node2D
 @export var main_node: Main
 
 var smoke_particles: Array[Dictionary] = []
+var spark_particles: Array[Dictionary] = []
 
 func _process(delta: float) -> void:
 	# Actualizar humo de fundiciones
@@ -11,6 +12,17 @@ func _process(delta: float) -> void:
 		p.life -= delta
 		p.pos += p.vel * delta
 	smoke_particles = smoke_particles.filter(func(p): return p.life > 0)
+	
+	# Actualizar chispas con gravedad y rebote
+	for p in spark_particles:
+		p.life -= delta
+		p.vel.y += 600.0 * delta # Gravedad
+		p.pos += p.vel * delta
+		if p.pos.y > p.ground_y:
+			p.pos.y = p.ground_y
+			p.vel.y = -p.vel.y * 0.4 # Rebote
+			p.vel.x *= 0.8
+	spark_particles = spark_particles.filter(func(p): return p.life > 0)
 	
 	if main_node != null:
 		for s in main_node.smelters:
@@ -20,6 +32,17 @@ func _process(delta: float) -> void:
 					"pos": c + Vector2(randf_range(-10, 10), -10),
 					"vel": Vector2(randf_range(-15, 15), -40),
 					"life": 1.5, "max_life": 1.5
+				})
+		
+		for a in main_node.assemblers:
+			if a.is_working and randf() < 0.3:
+				var size = GridSettings.get_rotated_size(Vector2i(3,3), a.direction)
+				var c = GridSettings.grid_to_world(a.grid_position) + Vector2(size.x, size.y) * GridSettings.CELL_SIZE / 2.0
+				spark_particles.append({
+					"pos": c + Vector2(randf_range(-20, 20), 0),
+					"vel": Vector2(randf_range(-80, 80), randf_range(-150, -50)),
+					"ground_y": c.y + (size.y * GridSettings.CELL_SIZE / 2.0) - 5.0,
+					"life": 0.8, "max_life": 0.8
 				})
 	queue_redraw()
 
@@ -232,7 +255,13 @@ func _draw() -> void:
 		if ins.held_item != null:
 			ItemData.draw_icon(self, arm_pos, 6.0, ins.held_item)
 			
-	# --- FASE 2: EFECTOS DE PARTÍCULAS (Humo) ---
+	# --- FASE 2: EFECTOS DE PARTÍCULAS ---
 	for p in smoke_particles:
 		var alpha = p.life / p.max_life
 		draw_circle(p.pos, 4.0 + (1.0 - alpha) * 8.0, Color(0.5, 0.5, 0.5, alpha * 0.6))
+		
+	for p in spark_particles:
+		var alpha = p.life / p.max_life
+		# Las chispas brillan mucho (HDR Glow)
+		draw_line(p.pos, p.pos - p.vel * 0.05, Color.YELLOW * 2.0 * alpha, 2.0)
+		draw_circle(p.pos, 2.0, Color.WHITE * 2.0 * alpha)

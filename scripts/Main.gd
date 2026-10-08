@@ -42,6 +42,9 @@ func _ready() -> void:
 	var ground = GroundRenderer.new()
 	add_child(ground)
 	
+	var clouds = CloudRenderer.new()
+	add_child(clouds)
+	
 	var atmosphere = AtmosphereSystem.new()
 	add_child(atmosphere)
 	
@@ -267,6 +270,7 @@ func _handle_click(mouse_pos: Vector2) -> void:
 				simulation.register_belt(belt); belts.append(belt)
 				_reconnect_adjacent_area(grid_pos, Vector2i(1,1))
 				_pay_cost(current_mode)
+				camera.add_shake(2.0)
 				
 		BuildToolbar.BuildMode.DRILL:
 			var drill = MiningDrill.new(grid_pos, current_rotation, resource_map)
@@ -274,6 +278,7 @@ func _handle_click(mouse_pos: Vector2) -> void:
 				drills.append(drill)
 				_reconnect_adjacent_area(grid_pos, Vector2i(1,1))
 				_pay_cost(current_mode)
+				camera.add_shake(2.0)
 				
 		BuildToolbar.BuildMode.SMELTER:
 			var smelter = Smelter.new(grid_pos, current_rotation)
@@ -281,6 +286,7 @@ func _handle_click(mouse_pos: Vector2) -> void:
 				smelters.append(smelter)
 				_reconnect_adjacent_area(grid_pos, Vector2i(1,1))
 				_pay_cost(current_mode)
+				camera.add_shake(2.0)
 				
 		BuildToolbar.BuildMode.CHEST:
 			var chest = StorageChest.new(grid_pos)
@@ -288,6 +294,7 @@ func _handle_click(mouse_pos: Vector2) -> void:
 				chests.append(chest)
 				_reconnect_adjacent_area(grid_pos, Vector2i(1,1))
 				_pay_cost(current_mode)
+				camera.add_shake(2.0)
 				
 		BuildToolbar.BuildMode.SPLITTER:
 			var splitter = Splitter.new(grid_pos, current_rotation)
@@ -295,6 +302,7 @@ func _handle_click(mouse_pos: Vector2) -> void:
 				splitters.append(splitter)
 				_reconnect_adjacent_area(grid_pos, Vector2i(1,1))
 				_pay_cost(current_mode)
+				camera.add_shake(2.0)
 				
 		BuildToolbar.BuildMode.MERGER:
 			var merger = Merger.new(grid_pos, current_rotation)
@@ -302,6 +310,7 @@ func _handle_click(mouse_pos: Vector2) -> void:
 				mergers.append(merger)
 				_reconnect_adjacent_area(grid_pos, Vector2i(1,1))
 				_pay_cost(current_mode)
+				camera.add_shake(2.0)
 				
 		BuildToolbar.BuildMode.ASSEMBLER:
 			var size = GridSettings.get_rotated_size(Vector2i(3,3), current_rotation)
@@ -310,6 +319,7 @@ func _handle_click(mouse_pos: Vector2) -> void:
 				assemblers.append(assembler)
 				_reconnect_adjacent_area(grid_pos, size)
 				_pay_cost(current_mode)
+				camera.add_shake(2.0)
 				
 		BuildToolbar.BuildMode.LABORATORY:
 			var size = GridSettings.get_rotated_size(Vector2i(2,2), current_rotation)
@@ -318,6 +328,7 @@ func _handle_click(mouse_pos: Vector2) -> void:
 				laboratories.append(lab)
 				_reconnect_adjacent_area(grid_pos, size)
 				_pay_cost(current_mode)
+				camera.add_shake(2.0)
 				
 		BuildToolbar.BuildMode.INSERTER:
 			var ins = Inserter.new(grid_pos, current_rotation, self)
@@ -325,10 +336,13 @@ func _handle_click(mouse_pos: Vector2) -> void:
 				inserters.append(ins)
 				# No necesitamos re-conectar nada porque el inserter busca en tiempo real
 				_pay_cost(current_mode)
+				camera.add_shake(2.0)
 				
 		BuildToolbar.BuildMode.DEMOLISH:
 			var entity = grid_manager.get_entity_at(grid_pos)
 			if entity == null: return
+			
+			camera.add_shake(3.0)
 			
 			var base_pos = grid_pos
 			var size = Vector2i(1,1)
