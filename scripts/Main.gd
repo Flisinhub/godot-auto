@@ -78,6 +78,10 @@ func _ready() -> void:
 	inventory_ui.main_node = self
 	add_child(inventory_ui)
 	
+	var toolbar = ToolbarUI.new()
+	toolbar.main_node = self
+	add_child(toolbar)
+	
 	simulation.simulation_ticked.connect(_on_simulation_ticked)
 	_setup_materials_and_recipes()
 	_generate_ore_veins()
@@ -172,6 +176,7 @@ func _input(event: InputEvent) -> void:
 			KEY_0: current_mode = BuildToolbar.BuildMode.INSERTER
 			KEY_T: tech_ui.toggle_ui()
 			KEY_TAB: inventory_ui.toggle()
+			KEY_Q: _pipette_tool()
 			KEY_R: current_rotation = (current_rotation + 1) % 4 as GridSettings.Direction
 			KEY_F9: SaveLoadSystem.save_game(self)
 			KEY_F10: SaveLoadSystem.load_game(self)
@@ -199,6 +204,37 @@ func _input(event: InputEvent) -> void:
 			last_drag_cell = current_cell
 			_handle_click(get_global_mouse_position())
 
+func _pipette_tool() -> void:
+	var grid_pos = GridSettings.world_to_grid(get_global_mouse_position())
+	var entity = grid_manager.get_entity_at(grid_pos)
+	if entity != null:
+		if entity is BeltCell:
+			current_mode = BuildToolbar.BuildMode.BELT
+			current_rotation = entity.direction
+		elif entity is MiningDrill:
+			current_mode = BuildToolbar.BuildMode.DRILL
+			current_rotation = entity.direction
+		elif entity is Smelter:
+			current_mode = BuildToolbar.BuildMode.SMELTER
+		elif entity is StorageChest:
+			current_mode = BuildToolbar.BuildMode.CHEST
+		elif entity is Splitter:
+			current_mode = BuildToolbar.BuildMode.SPLITTER
+			current_rotation = entity.direction
+		elif entity is Merger:
+			current_mode = BuildToolbar.BuildMode.MERGER
+			current_rotation = entity.direction
+		elif entity is Assembler:
+			current_mode = BuildToolbar.BuildMode.ASSEMBLER
+			current_rotation = entity.direction
+		elif entity is Laboratory:
+			current_mode = BuildToolbar.BuildMode.LABORATORY
+			current_rotation = entity.direction
+		elif entity is Inserter:
+			current_mode = BuildToolbar.BuildMode.INSERTER
+			current_rotation = entity.direction
+		_update_ui_text()
+
 func _get_item_by_id(item_id: StringName) -> ItemData:
 	if item_id == &"iron_ore": return iron_ore
 	if item_id == &"iron_ingot": return iron_ingot
@@ -213,26 +249,17 @@ func _get_recipe_by_id(recipe_id: StringName) -> RecipeData:
 	return null
 
 func _update_ui_text() -> void:
-	var mode_name = "SELECCIONAR / INSPECCIONAR"
-	match current_mode:
-		BuildToolbar.BuildMode.BELT: mode_name = "CINTA"
-		BuildToolbar.BuildMode.DRILL: mode_name = "EXTRACTOR"
-		BuildToolbar.BuildMode.SMELTER: mode_name = "FUNDICION"
-		BuildToolbar.BuildMode.CHEST: mode_name = "COFRE"
-		BuildToolbar.BuildMode.DEMOLISH: mode_name = "DEMOLER"
-		BuildToolbar.BuildMode.SPLITTER: mode_name = "DIVISOR"
-		BuildToolbar.BuildMode.MERGER: mode_name = "UNION"
-		BuildToolbar.BuildMode.ASSEMBLER: mode_name = "ENSAMBLADORA 3x3"
-		BuildToolbar.BuildMode.LABORATORY: mode_name = "LABORATORIO 2x2"
-		BuildToolbar.BuildMode.INSERTER: mode_name = "BRAZO ROBOTICO (Inserter)"
-		
-	var cost_text = "Coste: Gratis"
-	if build_costs.has(current_mode):
-		cost_text = "Coste:\n"
+	var cost_text = "Modo Inspección / Libre"
+	if current_mode != BuildToolbar.BuildMode.NONE and build_costs.has(current_mode):
+		cost_text = "Coste Construcción:\n"
 		for item in build_costs[current_mode].keys():
 			cost_text += "- " + item.item_name + ": " + str(build_costs[current_mode][item]) + "\n"
+	elif current_mode == BuildToolbar.BuildMode.DEMOLISH:
+		cost_text = "Modo DEMOLER activo"
+	elif current_mode != BuildToolbar.BuildMode.NONE:
+		cost_text = "Coste Construcción: Gratis"
 
-	ui_label.text = "Modo: %s\n\n%s\n\nCONTROLES:\nESC: Select/Loot | 1-0: Construir\nT: Tecnología | TAB: Inventario | 5: Demoler\nR: Rotar | F9/F10: Guardar" % [mode_name, cost_text]
+	ui_label.text = "%s\n\nCONTROLES:\nQ: Pipeta (Copiar edificio)\nWASD / Botón Central: Mover Cámara\nESC: Select/Loot | 1-0: Construir\nT: Tecnología | TAB: Inventario | 5: Demoler\nR: Rotar | F9/F10: Guardar" % [cost_text]
 	
 	if inventory_ui.panel.visible:
 		inventory_ui.refresh()
@@ -302,12 +329,19 @@ func _handle_click(mouse_pos: Vector2) -> void:
 			
 	match current_mode:
 		BuildToolbar.BuildMode.BELT:
-			var belt = BeltCell.new(grid_pos, current_rotation)
-			if grid_manager.occupy_cell(grid_pos, belt):
-				simulation.register_belt(belt); belts.append(belt)
-				_reconnect_adjacent_area(grid_pos, Vector2i(1,1))
-				_pay_cost(current_mode)
-				camera.add_shake(2.0)
+			var existing = grid_manager.get_entity_at(grid_pos)
+			if existing is BeltCell:
+				if existing.direction != current_rotation:
+					existing.direction = current_rotation
+					_reconnect_adjacent_area(grid_pos, Vector2i(1,1))
+					# No pagamos coste porque ya estaba construida
+			else:
+				var belt = BeltCell.new(grid_pos, current_rotation)
+				if grid_manager.occupy_cell(grid_pos, belt):
+					simulation.register_belt(belt); belts.append(belt)
+					_reconnect_adjacent_area(grid_pos, Vector2i(1,1))
+					_pay_cost(current_mode)
+					camera.add_shake(2.0)
 				
 		BuildToolbar.BuildMode.DRILL:
 			var drill = MiningDrill.new(grid_pos, current_rotation, resource_map)

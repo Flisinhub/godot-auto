@@ -20,6 +20,16 @@ func add_shake(amount: float) -> void:
 	shake_intensity = min(shake_intensity + amount, 20.0)
 
 func _process(delta: float) -> void:
+	# Movimiento WASD / Flechas
+	var pan_dir = Vector2.ZERO
+	if Input.is_key_pressed(KEY_W) or Input.is_key_pressed(KEY_UP): pan_dir.y -= 1
+	if Input.is_key_pressed(KEY_S) or Input.is_key_pressed(KEY_DOWN): pan_dir.y += 1
+	if Input.is_key_pressed(KEY_A) or Input.is_key_pressed(KEY_LEFT): pan_dir.x -= 1
+	if Input.is_key_pressed(KEY_D) or Input.is_key_pressed(KEY_RIGHT): pan_dir.x += 1
+	
+	if pan_dir != Vector2.ZERO:
+		target_position += pan_dir.normalized() * (1000.0 / target_zoom) * delta
+		
 	# Suavizado cinemático
 	zoom = zoom.lerp(Vector2(target_zoom, target_zoom), 15.0 * delta)
 	
