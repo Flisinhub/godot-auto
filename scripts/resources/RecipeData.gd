@@ -1,6 +1,9 @@
 class_name RecipeData
 extends Resource
 
+## Identificador único de la receta
+@export var id: StringName = &"unknown_recipe"
+
 ## Tiempo requerido para transformar los insumos en productos (en pasos de simulación/ticks)
 @export var processing_ticks: int = 15
 

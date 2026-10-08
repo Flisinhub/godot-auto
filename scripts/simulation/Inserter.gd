@@ -72,10 +72,12 @@ func _try_insert(target: Variant, item: ItemData) -> bool:
 	if target == null: return false
 	
 	if target is BeltCell:
+		# Preferir SIEMPRE el slot 1 (entrada) para no "teletransportar" encima de cintas bloqueadas
 		if target.is_slot_empty(1):
 			target.set_item(1, item)
 			return true
-		elif target.is_slot_empty(0):
+		# Si está completamente vacío, podemos usar el 0 como fallback visual (cinta final)
+		elif target.is_slot_empty(0) and target.next_cell == null:
 			target.set_item(0, item)
 			return true
 			
@@ -94,8 +96,6 @@ func _try_insert(target: Variant, item: ItemData) -> bool:
 				return true
 				
 	elif target is Laboratory:
-		if target.tech_manager != null and target.tech_manager.needs_item(item):
-			target.tech_manager.add_progress(item, 1)
-			return true
+		return target.inject_item(item)
 			
 	return false

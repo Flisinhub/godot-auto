@@ -28,3 +28,10 @@ func process_tick() -> void:
 				belt.extract_item(0)
 				tech_manager.add_progress(item, 1)
 				is_working = true
+
+func inject_item(item: ItemData) -> bool:
+	if tech_manager != null and tech_manager.needs_item(item):
+		tech_manager.add_progress(item, 1)
+		is_working = true
+		return true
+	return false

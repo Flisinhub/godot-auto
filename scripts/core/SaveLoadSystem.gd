@@ -16,11 +16,21 @@ static func save_game(main: Main) -> void:
 	
 	for belt in main.belts: data.belts.append({"x": belt.grid_position.x, "y": belt.grid_position.y, "dir": belt.direction})
 	for drill in main.drills: data.drills.append({"x": drill.grid_position.x, "y": drill.grid_position.y, "dir": drill.direction})
-	for smelter in main.smelters: data.smelters.append({"x": smelter.grid_position.x, "y": smelter.grid_position.y, "dir": smelter.direction})
-	for chest in main.chests: data.chests.append({"x": chest.grid_position.x, "y": chest.grid_position.y, "inventory": chest.current_total})
+	for smelter in main.smelters:
+		var recipe_id = smelter.active_recipe.id if smelter.active_recipe != null else ""
+		var in_inv = {}; for i in smelter.input_inventory.keys(): in_inv[i.id] = smelter.input_inventory[i]
+		var out_inv = {}; for i in smelter.output_inventory.keys(): out_inv[i.id] = smelter.output_inventory[i]
+		data.smelters.append({"x": smelter.grid_position.x, "y": smelter.grid_position.y, "dir": smelter.direction, "recipe": recipe_id, "in": in_inv, "out": out_inv})
+	for chest in main.chests:
+		var inv = {}; for i in chest.inventory.keys(): inv[i.id] = chest.inventory[i]
+		data.chests.append({"x": chest.grid_position.x, "y": chest.grid_position.y, "inventory": chest.current_total, "items": inv})
 	for splitter in main.splitters: data.splitters.append({"x": splitter.grid_position.x, "y": splitter.grid_position.y, "dir": splitter.direction})
 	for merger in main.mergers: data.mergers.append({"x": merger.grid_position.x, "y": merger.grid_position.y, "dir": merger.direction})
-	for assembler in main.assemblers: data.assemblers.append({"x": assembler.grid_position.x, "y": assembler.grid_position.y, "dir": assembler.direction})
+	for assembler in main.assemblers:
+		var recipe_id = assembler.active_recipe.id if assembler.active_recipe != null else ""
+		var in_inv = {}; for i in assembler.input_inventory.keys(): in_inv[i.id] = assembler.input_inventory[i]
+		var out_inv = {}; for i in assembler.output_inventory.keys(): out_inv[i.id] = assembler.output_inventory[i]
+		data.assemblers.append({"x": assembler.grid_position.x, "y": assembler.grid_position.y, "dir": assembler.direction, "recipe": recipe_id, "in": in_inv, "out": out_inv})
 	for lab in main.laboratories: data.laboratories.append({"x": lab.grid_position.x, "y": lab.grid_position.y, "dir": lab.direction})
 	
 	for ins in main.inserters:
@@ -47,6 +57,9 @@ static func load_game(main: Main) -> void:
 	
 	var data = JSON.parse_string(content)
 	if data == null: return
+	
+	# Romper ciclos de referencias circulares en las cintas para evitar Memory Leaks
+	for belt in main.belts: belt.next_cell = null
 	
 	main.grid_manager.clear_grid()
 	main.belts.clear()
@@ -89,12 +102,23 @@ static func load_game(main: Main) -> void:
 	if data.has("smelters"):
 		for s in data.smelters:
 			var smelter = Smelter.new(Vector2i(int(s.x), int(s.y)), int(s.dir) as GridSettings.Direction)
+			if s.has("recipe") and s.recipe != "": smelter.active_recipe = main._get_recipe_by_id(s.recipe)
+			if s.has("in"):
+				for item_id in s.in.keys():
+					var it = main._get_item_by_id(item_id); if it != null: smelter.input_inventory[it] = int(s.in[item_id])
+			if s.has("out"):
+				for item_id in s.out.keys():
+					var it = main._get_item_by_id(item_id); if it != null: smelter.output_inventory[it] = int(s.out[item_id])
 			main.grid_manager.occupy_cell(smelter.grid_position, smelter)
 			main.smelters.append(smelter)
 			
 	if data.has("chests"):
 		for c in data.chests:
 			var chest = StorageChest.new(Vector2i(int(c.x), int(c.y)))
+			if c.has("inventory"): chest.current_total = int(c.inventory)
+			if c.has("items"):
+				for item_id in c.items.keys():
+					var it = main._get_item_by_id(item_id); if it != null: chest.inventory[it] = int(c.items[item_id])
 			main.grid_manager.occupy_cell(chest.grid_position, chest)
 			main.chests.append(chest)
 			
@@ -114,6 +138,13 @@ static func load_game(main: Main) -> void:
 		for a in data.assemblers:
 			var size = GridSettings.get_rotated_size(Vector2i(3,3), int(a.dir) as GridSettings.Direction)
 			var assembler = Assembler.new(Vector2i(int(a.x), int(a.y)), int(a.dir) as GridSettings.Direction)
+			if a.has("recipe") and a.recipe != "": assembler.active_recipe = main._get_recipe_by_id(a.recipe)
+			if a.has("in"):
+				for item_id in a.in.keys():
+					var it = main._get_item_by_id(item_id); if it != null: assembler.input_inventory[it] = int(a.in[item_id])
+			if a.has("out"):
+				for item_id in a.out.keys():
+					var it = main._get_item_by_id(item_id); if it != null: assembler.output_inventory[it] = int(a.out[item_id])
 			main.grid_manager.occupy_area(assembler.grid_position, size, assembler)
 			main.assemblers.append(assembler)
 			

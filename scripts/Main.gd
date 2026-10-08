@@ -70,15 +70,15 @@ func _setup_materials_and_recipes() -> void:
 	copper_ingot = _create_item("copper_ingot", "Lingote de Cobre", Color.CORAL, Color.LIGHT_CORAL)
 	iron_gear = _create_item("iron_gear", "Engranaje", Color.DARK_GRAY, Color.GRAY)
 	
-	var r_iron = RecipeData.new(); r_iron.processing_ticks = 5
+	var r_iron = RecipeData.new(); r_iron.id = "smelt_iron"; r_iron.processing_ticks = 5
 	r_iron.inputs[iron_ore] = 1; r_iron.outputs[iron_ingot] = 1
 	all_recipes.append(r_iron)
 	
-	var r_copper = RecipeData.new(); r_copper.processing_ticks = 5
+	var r_copper = RecipeData.new(); r_copper.id = "smelt_copper"; r_copper.processing_ticks = 5
 	r_copper.inputs[copper_ore] = 1; r_copper.outputs[copper_ingot] = 1
 	all_recipes.append(r_copper)
 	
-	var r_gear = RecipeData.new(); r_gear.processing_ticks = 10
+	var r_gear = RecipeData.new(); r_gear.id = "craft_gear"; r_gear.processing_ticks = 10
 	r_gear.inputs[iron_ingot] = 2; r_gear.outputs[iron_gear] = 1
 	all_recipes.append(r_gear)
 	
@@ -157,6 +157,11 @@ func _get_item_by_id(item_id: StringName) -> ItemData:
 	if item_id == &"copper_ore": return copper_ore
 	if item_id == &"copper_ingot": return copper_ingot
 	if item_id == &"iron_gear": return iron_gear
+	return null
+
+func _get_recipe_by_id(recipe_id: StringName) -> RecipeData:
+	for r in all_recipes:
+		if r.id == recipe_id: return r
 	return null
 
 func _update_ui_text() -> void:
@@ -422,7 +427,6 @@ func _reconnect_adjacent_area(base_pos: Vector2i, size: Vector2i) -> void:
 	simulation._sort_belts_topologically()
 
 func _reconnect_all() -> void:
-	for x in range(-50, 50):
-		for y in range(-50, 50):
-			if not grid_manager.is_empty(Vector2i(x, y)):
-				_reconnect_adjacent_area(Vector2i(x, y), Vector2i(1,1))
+	# Iterar sobre las celdas ocupadas reales en lugar de un rango fijo quemado en código
+	for pos in grid_manager._cells.keys():
+		_reconnect_adjacent_area(pos, Vector2i(1,1))
