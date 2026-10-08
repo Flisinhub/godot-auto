@@ -61,8 +61,8 @@ func _draw() -> void:
 				var p2 = line_center
 				var p3 = line_center - ortho - (dir_vec * 2)
 				
-				draw_line(p1, p2, Color(0.3, 0.3, 0.3), 2.0)
-				draw_line(p2, p3, Color(0.3, 0.3, 0.3), 2.0)
+				draw_line(p1, p2, Color(0.8, 0.5, 0.1) * 1.2, 1.5)
+				draw_line(p2, p3, Color(0.8, 0.5, 0.1) * 1.2, 1.5)
 		
 		# 3. DIBUJAR LOS ÍTEMS INTERPOLADOS
 		var bobbing = sin(current_time * 15.0) * 1.5

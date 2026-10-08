@@ -186,11 +186,28 @@ func _draw() -> void:
 		var color = Color.ROYAL_BLUE.darkened(0.4) if assembler.is_working else Color.DARK_BLUE
 		_draw_metal_panel(Rect2(top_left, pixel_size), color)
 		
-		# Animación: Gran engranaje central girando
-		var rot_angle = -time * PI * 1.5 if assembler.is_working else 0.0
-		_draw_rotating_rect(m_center, cell_size * 0.8, rot_angle, Color.ROYAL_BLUE)
-		_draw_rotating_rect(m_center, cell_size * 0.8, rot_angle + PI/4.0, Color.CORNFLOWER_BLUE)
-		draw_circle(m_center, cell_size * 0.5, Color.DARK_SLATE_BLUE)
+		# Animación mecánica: Engranajes en las 4 esquinas de la 3x3
+		var rot_speed = time * PI * 2.0 if assembler.is_working else 0.0
+		var corners = [
+			top_left + Vector2(cell_size, cell_size),
+			top_left + Vector2(pixel_size.x - cell_size, cell_size),
+			top_left + Vector2(cell_size, pixel_size.y - cell_size),
+			top_left + Vector2(pixel_size.x - cell_size, pixel_size.y - cell_size)
+		]
+		for i in range(corners.size()):
+			var dir = 1.0 if (i % 2 == 0) else -1.0
+			var c = corners[i]
+			_draw_rotating_rect(c, cell_size * 0.45, rot_speed * dir, Color(0.3, 0.3, 0.35))
+			_draw_rotating_rect(c, cell_size * 0.45, (rot_speed * dir) + PI/4.0, Color(0.4, 0.4, 0.45))
+			draw_circle(c, cell_size * 0.2, Color(0.1, 0.1, 0.15))
+			
+		# Cúpula de cristal brillante central
+		var pulse = sin(time * 10.0) * 0.1 + 0.9 if assembler.is_working else 1.0
+		var dome_col = Color.AQUA.darkened(0.5)
+		if assembler.is_working:
+			dome_col = Color(0.2, 0.8, 1.0) * 1.5 # Glow HDR
+		draw_circle(m_center, cell_size * 0.8 * pulse, dome_col)
+		draw_circle(m_center, cell_size * 0.6 * pulse, dome_col.lightened(0.2))
 		
 		draw_string(default_font, top_left + Vector2(10, 20), "ENSAMBLADORA", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color.WHITE)
 		_draw_direction_arrow(m_center, assembler.direction, cell_size * 1.5, Color.WHITE)
