@@ -6,7 +6,8 @@ const SAVE_PATH: String = "user://factory_save.json"
 static func save_game(main: Main) -> void:
 	var data: Dictionary = {
 		"belts": [], "drills": [], "smelters": [],
-		"chests": [], "splitters": [], "mergers": [], "assemblers": []
+		"chests": [], "splitters": [], "mergers": [], "assemblers": [],
+		"player_inventory": {}
 	}
 	
 	for belt in main.belts: data.belts.append({"x": belt.grid_position.x, "y": belt.grid_position.y, "dir": belt.direction})
@@ -16,6 +17,9 @@ static func save_game(main: Main) -> void:
 	for splitter in main.splitters: data.splitters.append({"x": splitter.grid_position.x, "y": splitter.grid_position.y, "dir": splitter.direction})
 	for merger in main.mergers: data.mergers.append({"x": merger.grid_position.x, "y": merger.grid_position.y, "dir": merger.direction})
 	for assembler in main.assemblers: data.assemblers.append({"x": assembler.grid_position.x, "y": assembler.grid_position.y, "dir": assembler.direction})
+		
+	for item in main.player_inventory.keys():
+		data.player_inventory[item.id] = main.player_inventory[item]
 		
 	var file = FileAccess.open(SAVE_PATH, FileAccess.WRITE)
 	if file:
@@ -41,6 +45,7 @@ static func load_game(main: Main) -> void:
 	main.mergers.clear()
 	main.assemblers.clear()
 	main.simulation._belts.clear()
+	main.player_inventory.clear()
 	
 	if data.has("belts"):
 		for b in data.belts:
@@ -58,7 +63,6 @@ static func load_game(main: Main) -> void:
 	if data.has("smelters"):
 		for s in data.smelters:
 			var smelter = Smelter.new(Vector2i(int(s.x), int(s.y)), int(s.dir) as GridSettings.Direction)
-			smelter.active_recipe = main.debug_recipe
 			main.grid_manager.occupy_cell(smelter.grid_position, smelter)
 			main.smelters.append(smelter)
 			
@@ -84,8 +88,14 @@ static func load_game(main: Main) -> void:
 		for a in data.assemblers:
 			var size = GridSettings.get_rotated_size(Vector2i(3,3), int(a.dir) as GridSettings.Direction)
 			var assembler = Assembler.new(Vector2i(int(a.x), int(a.y)), int(a.dir) as GridSettings.Direction)
-			assembler.active_recipe = main.debug_recipe
 			main.grid_manager.occupy_area(assembler.grid_position, size, assembler)
 			main.assemblers.append(assembler)
 			
+	if data.has("player_inventory"):
+		for item_id in data.player_inventory.keys():
+			var item = main._get_item_by_id(item_id)
+			if item != null:
+				main.player_inventory[item] = int(data.player_inventory[item_id])
+			
 	main._reconnect_all()
+	main._update_ui_text()

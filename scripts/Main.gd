@@ -30,11 +30,14 @@ var copper_ore: ItemData
 var copper_ingot: ItemData
 var iron_gear: ItemData
 
+# --- NUEVO: Sistema de Inventario y Costes ---
+var player_inventory: Dictionary = {}
+var build_costs: Dictionary = {}
+
 func _ready() -> void:
 	cursor.main_node = self
 	machine_renderer.main_node = self
 	
-	# Inicializar la UI de Máquinas
 	machine_ui = MachineUI.new()
 	add_child(machine_ui)
 	
@@ -57,29 +60,37 @@ func _setup_materials_and_recipes() -> void:
 	copper_ingot = _create_item("copper_ingot", "Lingote de Cobre", Color.CORAL, Color.LIGHT_CORAL)
 	iron_gear = _create_item("iron_gear", "Engranaje", Color.DARK_GRAY, Color.GRAY)
 	
-	# Receta 1: Fundir Hierro
 	var r_iron = RecipeData.new(); r_iron.processing_ticks = 5
 	r_iron.inputs[iron_ore] = 1; r_iron.outputs[iron_ingot] = 1
 	all_recipes.append(r_iron)
 	
-	# Receta 2: Fundir Cobre
 	var r_copper = RecipeData.new(); r_copper.processing_ticks = 5
 	r_copper.inputs[copper_ore] = 1; r_copper.outputs[copper_ingot] = 1
 	all_recipes.append(r_copper)
 	
-	# Receta 3: Ensamblar Engranaje (Requiere Ensambladora)
 	var r_gear = RecipeData.new(); r_gear.processing_ticks = 10
 	r_gear.inputs[iron_ingot] = 2; r_gear.outputs[iron_gear] = 1
 	all_recipes.append(r_gear)
 	
 	machine_ui.setup_recipes(all_recipes)
+	
+	# === INVENTARIO INICIAL ===
+	player_inventory[iron_ingot] = 100
+	player_inventory[iron_gear] = 50
+	
+	# === COSTES DE CONSTRUCCIÓN ===
+	build_costs[BuildToolbar.BuildMode.BELT] = {iron_ingot: 1}
+	build_costs[BuildToolbar.BuildMode.DRILL] = {iron_ingot: 5, iron_gear: 5}
+	build_costs[BuildToolbar.BuildMode.SMELTER] = {iron_ingot: 10}
+	build_costs[BuildToolbar.BuildMode.CHEST] = {iron_ingot: 2}
+	build_costs[BuildToolbar.BuildMode.SPLITTER] = {iron_ingot: 3, iron_gear: 2}
+	build_costs[BuildToolbar.BuildMode.MERGER] = {iron_ingot: 3, iron_gear: 2}
+	build_costs[BuildToolbar.BuildMode.ASSEMBLER] = {iron_ingot: 15, iron_gear: 10}
 
 func _generate_ore_veins() -> void:
-	# Hierro en el centro
 	for x in range(4, 10):
 		for y in range(4, 10):
 			resource_map.register_vein(Vector2i(x, y), iron_ore)
-	# Cobre más abajo
 	for x in range(4, 10):
 		for y in range(12, 18):
 			resource_map.register_vein(Vector2i(x, y), copper_ore)
@@ -94,6 +105,9 @@ func _on_simulation_ticked() -> void:
 	
 	machine_renderer.queue_redraw()
 	belt_renderer.queue_redraw()
+	
+	# Refrescar UI ocasionalmente si el jugador interactúa con cofres o similar
+	# pero es mejor solo cuando construye o cambia para optimizar.
 
 func _input(event: InputEvent) -> void:
 	if event is InputEventKey and event.is_pressed() and not event.is_echo():
@@ -115,77 +129,137 @@ func _input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.is_pressed():
 		_handle_click(get_global_mouse_position())
 
+func _get_item_by_id(item_id: StringName) -> ItemData:
+	if item_id == &"iron_ore": return iron_ore
+	if item_id == &"iron_ingot": return iron_ingot
+	if item_id == &"copper_ore": return copper_ore
+	if item_id == &"copper_ingot": return copper_ingot
+	if item_id == &"iron_gear": return iron_gear
+	return null
+
 func _update_ui_text() -> void:
 	var mode_name = "SELECCIONAR / INSPECCIONAR"
 	match current_mode:
-		BuildToolbar.BuildMode.BELT: mode_name = "CINTA (Gris)"
-		BuildToolbar.BuildMode.DRILL: mode_name = "EXTRACTOR (Amarillo)"
-		BuildToolbar.BuildMode.SMELTER: mode_name = "FUNDICION (Naranja)"
-		BuildToolbar.BuildMode.CHEST: mode_name = "COFRE (Verde)"
-		BuildToolbar.BuildMode.DEMOLISH: mode_name = "DEMOLER (Rojo)"
-		BuildToolbar.BuildMode.SPLITTER: mode_name = "DIVISOR (Cian)"
-		BuildToolbar.BuildMode.MERGER: mode_name = "UNION (Magenta)"
-		BuildToolbar.BuildMode.ASSEMBLER: mode_name = "ENSAMBLADORA 3x3 (Azul)"
+		BuildToolbar.BuildMode.BELT: mode_name = "CINTA"
+		BuildToolbar.BuildMode.DRILL: mode_name = "EXTRACTOR"
+		BuildToolbar.BuildMode.SMELTER: mode_name = "FUNDICION"
+		BuildToolbar.BuildMode.CHEST: mode_name = "COFRE"
+		BuildToolbar.BuildMode.DEMOLISH: mode_name = "DEMOLER"
+		BuildToolbar.BuildMode.SPLITTER: mode_name = "DIVISOR"
+		BuildToolbar.BuildMode.MERGER: mode_name = "UNION"
+		BuildToolbar.BuildMode.ASSEMBLER: mode_name = "ENSAMBLADORA 3x3"
 		
-	var rot_name = "ARRIBA"
-	match current_rotation:
-		GridSettings.Direction.UP: rot_name = "ARRIBA"
-		GridSettings.Direction.RIGHT: rot_name = "DERECHA"
-		GridSettings.Direction.DOWN: rot_name = "ABAJO"
-		GridSettings.Direction.LEFT: rot_name = "IZQUIERDA"
+	var cost_text = "Coste: Gratis"
+	if build_costs.has(current_mode):
+		cost_text = "Coste:\n"
+		for item in build_costs[current_mode].keys():
+			cost_text += "- " + item.item_name + ": " + str(build_costs[current_mode][item]) + "\n"
 
-	ui_label.text = "Modo: %s\nRotacion: %s\n\nESC: Seleccionar\n1:Cinta | 2:Extractor | 3:Fundicion | 4:Cofre\n5:Demoler | 6:Divisor | 7:Union | 8:Ensambladora 3x3\nR:Rotar | F9:Guardar | F10:Cargar" % [mode_name, rot_name]
+	var inv_text = "--- INVENTARIO JUGADOR ---\n"
+	for item in player_inventory.keys():
+		inv_text += item.item_name + ": " + str(player_inventory[item]) + "\n"
+
+	ui_label.text = "Modo: %s\n\n%s\n%s\nCONTROLES:\nESC: Select/Loot | 1-8: Construir\n5: Demoler | R: Rotar | F9/F10: Guardar" % [mode_name, cost_text, inv_text]
+
+func _can_afford(mode: BuildToolbar.BuildMode) -> bool:
+	if not build_costs.has(mode): return true
+	var cost = build_costs[mode]
+	for item in cost.keys():
+		if player_inventory.get(item, 0) < cost[item]: return false
+	return true
+
+func _pay_cost(mode: BuildToolbar.BuildMode) -> void:
+	if not build_costs.has(mode): return
+	var cost = build_costs[mode]
+	for item in cost.keys():
+		player_inventory[item] -= cost[item]
+	_update_ui_text()
+
+func _refund_cost_for_entity(entity: Variant) -> void:
+	var mode = BuildToolbar.BuildMode.NONE
+	if entity is BeltCell: mode = BuildToolbar.BuildMode.BELT
+	elif entity is MiningDrill: mode = BuildToolbar.BuildMode.DRILL
+	elif entity is Smelter: mode = BuildToolbar.BuildMode.SMELTER
+	elif entity is StorageChest: mode = BuildToolbar.BuildMode.CHEST
+	elif entity is Splitter: mode = BuildToolbar.BuildMode.SPLITTER
+	elif entity is Merger: mode = BuildToolbar.BuildMode.MERGER
+	elif entity is Assembler: mode = BuildToolbar.BuildMode.ASSEMBLER
+	
+	if build_costs.has(mode):
+		var cost = build_costs[mode]
+		for item in cost.keys():
+			player_inventory[item] = player_inventory.get(item, 0) + cost[item]
 
 func _handle_click(mouse_pos: Vector2) -> void:
 	var grid_pos: Vector2i = GridSettings.world_to_grid(mouse_pos)
 	
 	if current_mode == BuildToolbar.BuildMode.NONE:
-		# Modo Inspector: Abre la UI si hacemos clic en una máquina
 		var entity = grid_manager.get_entity_at(grid_pos)
+		
+		# SAQUEAR COFRE
+		if entity is StorageChest:
+			var something_looted = false
+			for item in entity.inventory.keys():
+				player_inventory[item] = player_inventory.get(item, 0) + entity.inventory[item]
+				something_looted = true
+			if something_looted:
+				entity.inventory.clear()
+				entity.current_total = 0
+				_update_ui_text()
+			return
+			
 		if entity != null and not (entity is BeltCell):
 			machine_ui.open_for_machine(entity)
 		else:
 			machine_ui.panel.visible = false
 		return
 		
+	if current_mode != BuildToolbar.BuildMode.DEMOLISH:
+		if not _can_afford(current_mode):
+			return # No tenemos recursos, no hace nada (se podría añadir parpadeo rojo)
+			
 	match current_mode:
 		BuildToolbar.BuildMode.BELT:
 			var belt = BeltCell.new(grid_pos, current_rotation)
 			if grid_manager.occupy_cell(grid_pos, belt):
-				simulation.register_belt(belt)
-				belts.append(belt)
+				simulation.register_belt(belt); belts.append(belt)
 				_reconnect_adjacent_area(grid_pos, Vector2i(1,1))
+				_pay_cost(current_mode)
 				
 		BuildToolbar.BuildMode.DRILL:
 			var drill = MiningDrill.new(grid_pos, current_rotation, resource_map)
 			if grid_manager.occupy_cell(grid_pos, drill):
 				drills.append(drill)
 				_reconnect_adjacent_area(grid_pos, Vector2i(1,1))
+				_pay_cost(current_mode)
 				
 		BuildToolbar.BuildMode.SMELTER:
 			var smelter = Smelter.new(grid_pos, current_rotation)
-			# NOTA: Ya no asignamos receta por defecto, el jugador debe elegirla en la UI
 			if grid_manager.occupy_cell(grid_pos, smelter):
 				smelters.append(smelter)
 				_reconnect_adjacent_area(grid_pos, Vector2i(1,1))
+				_pay_cost(current_mode)
 				
 		BuildToolbar.BuildMode.CHEST:
 			var chest = StorageChest.new(grid_pos)
 			if grid_manager.occupy_cell(grid_pos, chest):
 				chests.append(chest)
 				_reconnect_adjacent_area(grid_pos, Vector2i(1,1))
+				_pay_cost(current_mode)
 				
 		BuildToolbar.BuildMode.SPLITTER:
 			var splitter = Splitter.new(grid_pos, current_rotation)
 			if grid_manager.occupy_cell(grid_pos, splitter):
 				splitters.append(splitter)
 				_reconnect_adjacent_area(grid_pos, Vector2i(1,1))
+				_pay_cost(current_mode)
 				
 		BuildToolbar.BuildMode.MERGER:
 			var merger = Merger.new(grid_pos, current_rotation)
 			if grid_manager.occupy_cell(grid_pos, merger):
 				mergers.append(merger)
 				_reconnect_adjacent_area(grid_pos, Vector2i(1,1))
+				_pay_cost(current_mode)
 				
 		BuildToolbar.BuildMode.ASSEMBLER:
 			var size = GridSettings.get_rotated_size(Vector2i(3,3), current_rotation)
@@ -193,6 +267,7 @@ func _handle_click(mouse_pos: Vector2) -> void:
 			if grid_manager.occupy_area(grid_pos, size, assembler):
 				assemblers.append(assembler)
 				_reconnect_adjacent_area(grid_pos, size)
+				_pay_cost(current_mode)
 				
 		BuildToolbar.BuildMode.DEMOLISH:
 			var entity = grid_manager.get_entity_at(grid_pos)
@@ -207,15 +282,20 @@ func _handle_click(mouse_pos: Vector2) -> void:
 			grid_manager.free_cell(grid_pos)
 			
 			if entity is BeltCell:
-				simulation.unregister_belt(entity)
-				belts.erase(entity)
+				simulation.unregister_belt(entity); belts.erase(entity)
 			elif entity is MiningDrill: drills.erase(entity)
 			elif entity is Smelter: smelters.erase(entity)
-			elif entity is StorageChest: chests.erase(entity)
+			elif entity is StorageChest:
+				# Devolver objetos del cofre al jugador al romper
+				for item in entity.inventory.keys():
+					player_inventory[item] = player_inventory.get(item, 0) + entity.inventory[item]
+				chests.erase(entity)
 			elif entity is Splitter: splitters.erase(entity)
 			elif entity is Merger: mergers.erase(entity)
 			elif entity is Assembler: assemblers.erase(entity)
 			
+			_refund_cost_for_entity(entity)
+			_update_ui_text()
 			_reconnect_adjacent_area(base_pos, size)
 			
 	machine_renderer.queue_redraw()
