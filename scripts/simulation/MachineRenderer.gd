@@ -90,3 +90,12 @@ func _draw() -> void:
 		for out_port in assembler.global_output_ports:
 			var port_center = GridSettings.grid_to_world(out_port) + Vector2(cell_size/2, cell_size/2)
 			draw_circle(port_center, 6.0, Color.RED)
+			
+	for lab in main_node.laboratories:
+		var top_left = GridSettings.grid_to_world(lab.grid_position)
+		var pixel_size = Vector2(lab.current_size.x * cell_size, lab.current_size.y * cell_size)
+		var color = Color.PURPLE if lab.is_working else Color.DARK_PURPLE
+		draw_rect(Rect2(top_left, pixel_size), color, true)
+		draw_rect(Rect2(top_left, pixel_size), Color.ORCHID, false, 2.0)
+		draw_string(default_font, top_left + Vector2(10, 20), "LABORATORIO", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color.WHITE)
+

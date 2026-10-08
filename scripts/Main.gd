@@ -20,9 +20,12 @@ var belts: Array[BeltCell] = []
 var splitters: Array[Splitter] = []
 var mergers: Array[Merger] = []
 var assemblers: Array[Assembler] = []
+var laboratories: Array[Laboratory] = []
 
 var all_recipes: Array[RecipeData] = []
 var machine_ui: MachineUI
+var tech_ui: TechUI
+var tech_manager: TechManager
 
 var iron_ore: ItemData
 var iron_ingot: ItemData
@@ -38,8 +41,14 @@ func _ready() -> void:
 	cursor.main_node = self
 	machine_renderer.main_node = self
 	
+	tech_manager = TechManager.new()
+	
 	machine_ui = MachineUI.new()
 	add_child(machine_ui)
+	
+	tech_ui = TechUI.new()
+	add_child(tech_ui)
+	tech_ui.setup(tech_manager)
 	
 	simulation.simulation_ticked.connect(_on_simulation_ticked)
 	_setup_materials_and_recipes()
@@ -86,6 +95,12 @@ func _setup_materials_and_recipes() -> void:
 	build_costs[BuildToolbar.BuildMode.SPLITTER] = {iron_ingot: 3, iron_gear: 2}
 	build_costs[BuildToolbar.BuildMode.MERGER] = {iron_ingot: 3, iron_gear: 2}
 	build_costs[BuildToolbar.BuildMode.ASSEMBLER] = {iron_ingot: 15, iron_gear: 10}
+	build_costs[BuildToolbar.BuildMode.LABORATORY] = {iron_ingot: 20, copper_ingot: 10, iron_gear: 15}
+	
+	# === ÁRBOL DE TECNOLOGÍAS ===
+	tech_manager.register_tech("logistics_1", "Logistica Básica", "Desbloquea Divisores y Uniones.", {iron_gear: 10})
+	tech_manager.register_tech("advanced_processing", "Procesamiento Avanzado", "Permite mejores recetas.", {copper_ingot: 20})
+	tech_manager.register_tech("fast_belts", "Cintas Rápidas", "Desbloquea Cintas Rojas (Nivel 2).", {iron_gear: 50, copper_ingot: 50})
 
 func _generate_ore_veins() -> void:
 	for x in range(4, 10):
@@ -102,6 +117,7 @@ func _on_simulation_ticked() -> void:
 	for splitter in splitters: splitter.process_tick()
 	for merger in mergers: merger.process_tick()
 	for assembler in assemblers: assembler.process_tick()
+	for lab in laboratories: lab.process_tick()
 	
 	machine_renderer.queue_redraw()
 	belt_renderer.queue_redraw()
@@ -121,6 +137,8 @@ func _input(event: InputEvent) -> void:
 			KEY_6: current_mode = BuildToolbar.BuildMode.SPLITTER
 			KEY_7: current_mode = BuildToolbar.BuildMode.MERGER
 			KEY_8: current_mode = BuildToolbar.BuildMode.ASSEMBLER
+			KEY_9: current_mode = BuildToolbar.BuildMode.LABORATORY
+			KEY_T: tech_ui.toggle_ui()
 			KEY_R: current_rotation = (current_rotation + 1) % 4 as GridSettings.Direction
 			KEY_F9: SaveLoadSystem.save_game(self)
 			KEY_F10: SaveLoadSystem.load_game(self)
@@ -148,6 +166,7 @@ func _update_ui_text() -> void:
 		BuildToolbar.BuildMode.SPLITTER: mode_name = "DIVISOR"
 		BuildToolbar.BuildMode.MERGER: mode_name = "UNION"
 		BuildToolbar.BuildMode.ASSEMBLER: mode_name = "ENSAMBLADORA 3x3"
+		BuildToolbar.BuildMode.LABORATORY: mode_name = "LABORATORIO 2x2"
 		
 	var cost_text = "Coste: Gratis"
 	if build_costs.has(current_mode):
@@ -159,9 +178,13 @@ func _update_ui_text() -> void:
 	for item in player_inventory.keys():
 		inv_text += item.item_name + ": " + str(player_inventory[item]) + "\n"
 
-	ui_label.text = "Modo: %s\n\n%s\n%s\nCONTROLES:\nESC: Select/Loot | 1-8: Construir\n5: Demoler | R: Rotar | F9/F10: Guardar" % [mode_name, cost_text, inv_text]
+	ui_label.text = "Modo: %s\n\n%s\n%s\nCONTROLES:\nESC: Select/Loot | 1-9: Construir\nT: Arbol Tecnología | 5: Demoler\nR: Rotar | F9/F10: Guardar" % [mode_name, cost_text, inv_text]
 
 func _can_afford(mode: BuildToolbar.BuildMode) -> bool:
+	if mode == BuildToolbar.BuildMode.SPLITTER or mode == BuildToolbar.BuildMode.MERGER:
+		if not tech_manager.is_unlocked("logistics_1"):
+			return false
+			
 	if not build_costs.has(mode): return true
 	var cost = build_costs[mode]
 	for item in cost.keys():
@@ -184,6 +207,7 @@ func _refund_cost_for_entity(entity: Variant) -> void:
 	elif entity is Splitter: mode = BuildToolbar.BuildMode.SPLITTER
 	elif entity is Merger: mode = BuildToolbar.BuildMode.MERGER
 	elif entity is Assembler: mode = BuildToolbar.BuildMode.ASSEMBLER
+	elif entity is Laboratory: mode = BuildToolbar.BuildMode.LABORATORY
 	
 	if build_costs.has(mode):
 		var cost = build_costs[mode]
@@ -269,6 +293,14 @@ func _handle_click(mouse_pos: Vector2) -> void:
 				_reconnect_adjacent_area(grid_pos, size)
 				_pay_cost(current_mode)
 				
+		BuildToolbar.BuildMode.LABORATORY:
+			var size = GridSettings.get_rotated_size(Vector2i(2,2), current_rotation)
+			var lab = Laboratory.new(grid_pos, tech_manager)
+			if grid_manager.occupy_area(grid_pos, size, lab):
+				laboratories.append(lab)
+				_reconnect_adjacent_area(grid_pos, size)
+				_pay_cost(current_mode)
+				
 		BuildToolbar.BuildMode.DEMOLISH:
 			var entity = grid_manager.get_entity_at(grid_pos)
 			if entity == null: return
@@ -276,6 +308,9 @@ func _handle_click(mouse_pos: Vector2) -> void:
 			var base_pos = grid_pos
 			var size = Vector2i(1,1)
 			if entity is Assembler:
+				base_pos = entity.grid_position
+				size = entity.current_size
+			elif entity is Laboratory:
 				base_pos = entity.grid_position
 				size = entity.current_size
 				
@@ -286,13 +321,13 @@ func _handle_click(mouse_pos: Vector2) -> void:
 			elif entity is MiningDrill: drills.erase(entity)
 			elif entity is Smelter: smelters.erase(entity)
 			elif entity is StorageChest:
-				# Devolver objetos del cofre al jugador al romper
 				for item in entity.inventory.keys():
 					player_inventory[item] = player_inventory.get(item, 0) + entity.inventory[item]
 				chests.erase(entity)
 			elif entity is Splitter: splitters.erase(entity)
 			elif entity is Merger: mergers.erase(entity)
 			elif entity is Assembler: assemblers.erase(entity)
+			elif entity is Laboratory: laboratories.erase(entity)
 			
 			_refund_cost_for_entity(entity)
 			_update_ui_text()
@@ -322,6 +357,7 @@ func _reconnect_adjacent_area(base_pos: Vector2i, size: Vector2i) -> void:
 		elif ent is Merger: ent.input_belts = [null, null, null]; ent.output_belt = null
 		elif ent is StorageChest: ent.input_belt = null
 		elif ent is Assembler: ent.input_belts.clear(); ent.output_belts.clear()
+		elif ent is Laboratory: ent.input_belts.clear()
 	
 	for pos in positions_to_update.keys():
 		var ent = grid_manager.get_entity_at(pos)
@@ -333,6 +369,7 @@ func _reconnect_adjacent_area(base_pos: Vector2i, size: Vector2i) -> void:
 			elif target is StorageChest: target.input_belt = ent
 			elif target is Smelter and target.input_port_pos == target_pos: target.input_belt = ent
 			elif target is Splitter: target.input_belt = ent
+			elif target is Laboratory: target.input_belts.append(ent)
 			elif target is Merger:
 				var m_dir = GridSettings.get_direction_vector(target.direction)
 				var relative = ent.grid_position - target.grid_position

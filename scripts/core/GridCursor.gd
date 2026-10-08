@@ -29,6 +29,8 @@ func _draw() -> void:
 	var size_cells: Vector2i = Vector2i(1, 1)
 	if current_mode == BuildToolbar.BuildMode.ASSEMBLER:
 		size_cells = GridSettings.get_rotated_size(Vector2i(3,3), current_rot)
+	elif current_mode == BuildToolbar.BuildMode.LABORATORY:
+		size_cells = GridSettings.get_rotated_size(Vector2i(2,2), current_rot)
 		
 	var pixel_size = Vector2(size_cells.x * base_size, size_cells.y * base_size)
 	var rect: Rect2 = Rect2(Vector2.ZERO, pixel_size)
@@ -75,7 +77,9 @@ func _draw_ghost(rect: Rect2, base_color: Color, mode: int, dir: GridSettings.Di
 			draw_rect(rect, Color(1.0, 0.0, 1.0, 0.3), true)
 		8: # ASSEMBLER
 			draw_rect(rect, Color(0.0, 0.0, 1.0, 0.3), true)
-			# Dibujar indicativo central
 			draw_circle(center, 12.0, Color(1, 1, 1, 0.5))
+		9: # LABORATORY
+			draw_rect(rect, Color(0.5, 0.0, 0.5, 0.3), true)
+			draw_circle(center, 10.0, Color(1, 1, 1, 0.5))
 		_:
 			draw_rect(rect, base_color, true)

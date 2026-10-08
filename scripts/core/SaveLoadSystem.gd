@@ -6,8 +6,11 @@ const SAVE_PATH: String = "user://factory_save.json"
 static func save_game(main: Main) -> void:
 	var data: Dictionary = {
 		"belts": [], "drills": [], "smelters": [],
-		"chests": [], "splitters": [], "mergers": [], "assemblers": [],
-		"player_inventory": {}
+		"chests": [], "splitters": [], "mergers": [], "assemblers": [], "laboratories": [],
+		"player_inventory": {},
+		"unlocked_techs": main.tech_manager.unlocked_techs,
+		"active_research": main.tech_manager.active_research,
+		"research_progress": {}
 	}
 	
 	for belt in main.belts: data.belts.append({"x": belt.grid_position.x, "y": belt.grid_position.y, "dir": belt.direction})
@@ -17,9 +20,13 @@ static func save_game(main: Main) -> void:
 	for splitter in main.splitters: data.splitters.append({"x": splitter.grid_position.x, "y": splitter.grid_position.y, "dir": splitter.direction})
 	for merger in main.mergers: data.mergers.append({"x": merger.grid_position.x, "y": merger.grid_position.y, "dir": merger.direction})
 	for assembler in main.assemblers: data.assemblers.append({"x": assembler.grid_position.x, "y": assembler.grid_position.y, "dir": assembler.direction})
+	for lab in main.laboratories: data.laboratories.append({"x": lab.grid_position.x, "y": lab.grid_position.y, "dir": lab.direction})
 		
 	for item in main.player_inventory.keys():
 		data.player_inventory[item.id] = main.player_inventory[item]
+		
+	for item_id in main.tech_manager.research_progress.keys():
+		data.research_progress[item_id] = main.tech_manager.research_progress[item_id]
 		
 	var file = FileAccess.open(SAVE_PATH, FileAccess.WRITE)
 	if file:
@@ -44,8 +51,21 @@ static func load_game(main: Main) -> void:
 	main.splitters.clear()
 	main.mergers.clear()
 	main.assemblers.clear()
+	main.laboratories.clear()
 	main.simulation._belts.clear()
 	main.player_inventory.clear()
+	
+	main.tech_manager.unlocked_techs.clear()
+	main.tech_manager.active_research = ""
+	main.tech_manager.research_progress.clear()
+	
+	if data.has("unlocked_techs"):
+		for t in data.unlocked_techs: main.tech_manager.unlocked_techs.append(t)
+	if data.has("active_research"):
+		main.tech_manager.active_research = data.active_research
+	if data.has("research_progress"):
+		for item_id in data.research_progress.keys():
+			main.tech_manager.research_progress[item_id] = int(data.research_progress[item_id])
 	
 	if data.has("belts"):
 		for b in data.belts:
@@ -90,6 +110,13 @@ static func load_game(main: Main) -> void:
 			var assembler = Assembler.new(Vector2i(int(a.x), int(a.y)), int(a.dir) as GridSettings.Direction)
 			main.grid_manager.occupy_area(assembler.grid_position, size, assembler)
 			main.assemblers.append(assembler)
+			
+	if data.has("laboratories"):
+		for l in data.laboratories:
+			var size = GridSettings.get_rotated_size(Vector2i(2,2), int(l.dir) as GridSettings.Direction)
+			var lab = Laboratory.new(Vector2i(int(l.x), int(l.y)), main.tech_manager)
+			main.grid_manager.occupy_area(lab.grid_position, size, lab)
+			main.laboratories.append(lab)
 			
 	if data.has("player_inventory"):
 		for item_id in data.player_inventory.keys():
