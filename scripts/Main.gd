@@ -1,7 +1,7 @@
 class_name Main
 extends Node2D
 
-var current_mode: BuildToolbar.BuildMode = BuildToolbar.BuildMode.BELT
+var current_mode: BuildToolbar.BuildMode = BuildToolbar.BuildMode.NONE
 var current_rotation: GridSettings.Direction = GridSettings.Direction.UP
 
 var grid_manager: GridManager = GridManager.new()
@@ -21,39 +21,68 @@ var splitters: Array[Splitter] = []
 var mergers: Array[Merger] = []
 var assemblers: Array[Assembler] = []
 
-var debug_iron_ore: ItemData
-var debug_iron_ingot: ItemData
-var debug_recipe: RecipeData
+var all_recipes: Array[RecipeData] = []
+var machine_ui: MachineUI
+
+var iron_ore: ItemData
+var iron_ingot: ItemData
+var copper_ore: ItemData
+var copper_ingot: ItemData
+var iron_gear: ItemData
 
 func _ready() -> void:
 	cursor.main_node = self
 	machine_renderer.main_node = self
 	
+	# Inicializar la UI de Máquinas
+	machine_ui = MachineUI.new()
+	add_child(machine_ui)
+	
 	simulation.simulation_ticked.connect(_on_simulation_ticked)
-	_setup_debug_data()
+	_setup_materials_and_recipes()
 	_generate_ore_veins()
 	_update_ui_text()
 
-func _setup_debug_data() -> void:
-	debug_iron_ore = ItemData.new(); debug_iron_ore.id = &"iron_ore"
-	var tex_ore = GradientTexture2D.new(); tex_ore.width = 16; tex_ore.height = 16
-	var grad_ore = Gradient.new(); grad_ore.colors = PackedColorArray([Color.SLATE_GRAY, Color.LIGHT_SLATE_GRAY])
-	tex_ore.gradient = grad_ore; debug_iron_ore.texture = tex_ore
+func _create_item(id_name: String, human_name: String, c1: Color, c2: Color) -> ItemData:
+	var item = ItemData.new(); item.id = id_name; item.item_name = human_name
+	var tex = GradientTexture2D.new(); tex.width = 16; tex.height = 16
+	var grad = Gradient.new(); grad.colors = PackedColorArray([c1, c2])
+	tex.gradient = grad; item.texture = tex
+	return item
+
+func _setup_materials_and_recipes() -> void:
+	iron_ore = _create_item("iron_ore", "Mena de Hierro", Color.SLATE_GRAY, Color.LIGHT_SLATE_GRAY)
+	iron_ingot = _create_item("iron_ingot", "Lingote de Hierro", Color.DARK_ORANGE, Color.ORANGE)
+	copper_ore = _create_item("copper_ore", "Mena de Cobre", Color.SADDLE_BROWN, Color.PERU)
+	copper_ingot = _create_item("copper_ingot", "Lingote de Cobre", Color.CORAL, Color.LIGHT_CORAL)
+	iron_gear = _create_item("iron_gear", "Engranaje", Color.DARK_GRAY, Color.GRAY)
 	
-	debug_iron_ingot = ItemData.new(); debug_iron_ingot.id = &"iron_ingot"
-	var tex_ingot = GradientTexture2D.new(); tex_ingot.width = 16; tex_ingot.height = 16
-	var grad_ingot = Gradient.new(); grad_ingot.colors = PackedColorArray([Color.DARK_ORANGE, Color.ORANGE])
-	tex_ingot.gradient = grad_ingot; debug_iron_ingot.texture = tex_ingot
+	# Receta 1: Fundir Hierro
+	var r_iron = RecipeData.new(); r_iron.processing_ticks = 5
+	r_iron.inputs[iron_ore] = 1; r_iron.outputs[iron_ingot] = 1
+	all_recipes.append(r_iron)
 	
-	debug_recipe = RecipeData.new()
-	debug_recipe.processing_ticks = 10
-	debug_recipe.inputs[debug_iron_ore] = 1
-	debug_recipe.outputs[debug_iron_ingot] = 1
+	# Receta 2: Fundir Cobre
+	var r_copper = RecipeData.new(); r_copper.processing_ticks = 5
+	r_copper.inputs[copper_ore] = 1; r_copper.outputs[copper_ingot] = 1
+	all_recipes.append(r_copper)
+	
+	# Receta 3: Ensamblar Engranaje (Requiere Ensambladora)
+	var r_gear = RecipeData.new(); r_gear.processing_ticks = 10
+	r_gear.inputs[iron_ingot] = 2; r_gear.outputs[iron_gear] = 1
+	all_recipes.append(r_gear)
+	
+	machine_ui.setup_recipes(all_recipes)
 
 func _generate_ore_veins() -> void:
-	for x in range(4, 12):
-		for y in range(4, 12):
-			resource_map.register_vein(Vector2i(x, y), debug_iron_ore)
+	# Hierro en el centro
+	for x in range(4, 10):
+		for y in range(4, 10):
+			resource_map.register_vein(Vector2i(x, y), iron_ore)
+	# Cobre más abajo
+	for x in range(4, 10):
+		for y in range(12, 18):
+			resource_map.register_vein(Vector2i(x, y), copper_ore)
 
 func _on_simulation_ticked() -> void:
 	for drill in drills: drill.process_tick()
@@ -69,6 +98,7 @@ func _on_simulation_ticked() -> void:
 func _input(event: InputEvent) -> void:
 	if event is InputEventKey and event.is_pressed() and not event.is_echo():
 		match event.keycode:
+			KEY_ESCAPE: current_mode = BuildToolbar.BuildMode.NONE
 			KEY_1: current_mode = BuildToolbar.BuildMode.BELT
 			KEY_2: current_mode = BuildToolbar.BuildMode.DRILL
 			KEY_3: current_mode = BuildToolbar.BuildMode.SMELTER
@@ -83,10 +113,10 @@ func _input(event: InputEvent) -> void:
 		_update_ui_text()
 		
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.is_pressed():
-		_handle_build_click(get_global_mouse_position())
+		_handle_click(get_global_mouse_position())
 
 func _update_ui_text() -> void:
-	var mode_name = "NINGUNO"
+	var mode_name = "SELECCIONAR / INSPECCIONAR"
 	match current_mode:
 		BuildToolbar.BuildMode.BELT: mode_name = "CINTA (Gris)"
 		BuildToolbar.BuildMode.DRILL: mode_name = "EXTRACTOR (Amarillo)"
@@ -104,11 +134,20 @@ func _update_ui_text() -> void:
 		GridSettings.Direction.DOWN: rot_name = "ABAJO"
 		GridSettings.Direction.LEFT: rot_name = "IZQUIERDA"
 
-	ui_label.text = "Modo: %s\nRotacion: %s\n\n1:Cinta | 2:Extractor | 3:Fundicion | 4:Cofre\n5:Demoler | 6:Divisor | 7:Union | 8:Ensambladora 3x3\nR:Rotar | F9:Guardar | F10:Cargar" % [mode_name, rot_name]
+	ui_label.text = "Modo: %s\nRotacion: %s\n\nESC: Seleccionar\n1:Cinta | 2:Extractor | 3:Fundicion | 4:Cofre\n5:Demoler | 6:Divisor | 7:Union | 8:Ensambladora 3x3\nR:Rotar | F9:Guardar | F10:Cargar" % [mode_name, rot_name]
 
-func _handle_build_click(mouse_pos: Vector2) -> void:
+func _handle_click(mouse_pos: Vector2) -> void:
 	var grid_pos: Vector2i = GridSettings.world_to_grid(mouse_pos)
 	
+	if current_mode == BuildToolbar.BuildMode.NONE:
+		# Modo Inspector: Abre la UI si hacemos clic en una máquina
+		var entity = grid_manager.get_entity_at(grid_pos)
+		if entity != null and not (entity is BeltCell):
+			machine_ui.open_for_machine(entity)
+		else:
+			machine_ui.panel.visible = false
+		return
+		
 	match current_mode:
 		BuildToolbar.BuildMode.BELT:
 			var belt = BeltCell.new(grid_pos, current_rotation)
@@ -125,7 +164,7 @@ func _handle_build_click(mouse_pos: Vector2) -> void:
 				
 		BuildToolbar.BuildMode.SMELTER:
 			var smelter = Smelter.new(grid_pos, current_rotation)
-			smelter.active_recipe = debug_recipe
+			# NOTA: Ya no asignamos receta por defecto, el jugador debe elegirla en la UI
 			if grid_manager.occupy_cell(grid_pos, smelter):
 				smelters.append(smelter)
 				_reconnect_adjacent_area(grid_pos, Vector2i(1,1))
@@ -151,7 +190,6 @@ func _handle_build_click(mouse_pos: Vector2) -> void:
 		BuildToolbar.BuildMode.ASSEMBLER:
 			var size = GridSettings.get_rotated_size(Vector2i(3,3), current_rotation)
 			var assembler = Assembler.new(grid_pos, current_rotation)
-			assembler.active_recipe = debug_recipe
 			if grid_manager.occupy_area(grid_pos, size, assembler):
 				assemblers.append(assembler)
 				_reconnect_adjacent_area(grid_pos, size)
@@ -166,7 +204,7 @@ func _handle_build_click(mouse_pos: Vector2) -> void:
 				base_pos = entity.grid_position
 				size = entity.current_size
 				
-			grid_manager.free_cell(grid_pos) # Esto borra todas las celdas ocupadas por la entidad
+			grid_manager.free_cell(grid_pos)
 			
 			if entity is BeltCell:
 				simulation.unregister_belt(entity)
@@ -183,16 +221,12 @@ func _handle_build_click(mouse_pos: Vector2) -> void:
 	machine_renderer.queue_redraw()
 	belt_renderer.queue_redraw()
 
-## Actualización Delta expandida para soportar áreas (como 3x3)
 func _reconnect_adjacent_area(base_pos: Vector2i, size: Vector2i) -> void:
 	var positions_to_update: Dictionary = {}
-	
-	# Añadimos el área central
 	for x in range(size.x):
 		for y in range(size.y):
 			var p = base_pos + Vector2i(x, y)
 			positions_to_update[p] = true
-			# Añadimos perímetro (vecinos inmediatos)
 			positions_to_update[p + Vector2i.UP] = true
 			positions_to_update[p + Vector2i.DOWN] = true
 			positions_to_update[p + Vector2i.LEFT] = true
@@ -201,29 +235,20 @@ func _reconnect_adjacent_area(base_pos: Vector2i, size: Vector2i) -> void:
 	for pos in positions_to_update.keys():
 		var ent = grid_manager.get_entity_at(pos)
 		if ent == null: continue
-		
-		# Limpiar enlaces
 		if ent is BeltCell: ent.next_cell = null
 		elif ent is MiningDrill: ent.output_belt = null
 		elif ent is Splitter: ent.output_belts = [null, null, null]
-		elif ent is Smelter:
-			ent.input_belt = null; ent.output_belt = null
-		elif ent is Merger:
-			ent.input_belts = [null, null, null]; ent.output_belt = null
-		elif ent is StorageChest:
-			ent.input_belt = null
-		elif ent is Assembler:
-			ent.input_belts.clear(); ent.output_belts.clear()
+		elif ent is Smelter: ent.input_belt = null; ent.output_belt = null
+		elif ent is Merger: ent.input_belts = [null, null, null]; ent.output_belt = null
+		elif ent is StorageChest: ent.input_belt = null
+		elif ent is Assembler: ent.input_belts.clear(); ent.output_belts.clear()
 	
-	# Recalcular
 	for pos in positions_to_update.keys():
 		var ent = grid_manager.get_entity_at(pos)
 		if ent == null: continue
-		
 		if ent is BeltCell:
 			var target_pos = ent.grid_position + GridSettings.get_direction_vector(ent.direction)
 			var target = grid_manager.get_entity_at(target_pos)
-			
 			if target is BeltCell: ent.next_cell = target
 			elif target is StorageChest: target.input_belt = ent
 			elif target is Smelter and target.input_port_pos == target_pos: target.input_belt = ent
@@ -237,12 +262,10 @@ func _reconnect_adjacent_area(base_pos: Vector2i, size: Vector2i) -> void:
 			elif target is Assembler:
 				if target.global_input_ports.has(target_pos):
 					target.input_belts.append(ent)
-				
 		elif ent is MiningDrill:
 			var target_pos = ent.grid_position + GridSettings.get_direction_vector(ent.direction)
 			var target = grid_manager.get_entity_at(target_pos)
 			if target is BeltCell: ent.output_belt = target
-			
 		elif ent is Splitter:
 			var s_dir = GridSettings.get_direction_vector(ent.direction)
 			var fronts = [s_dir, Vector2i(-s_dir.y, s_dir.x), Vector2i(s_dir.y, -s_dir.x)]
@@ -250,22 +273,18 @@ func _reconnect_adjacent_area(base_pos: Vector2i, size: Vector2i) -> void:
 				var target_pos = ent.grid_position + fronts[i]
 				var target = grid_manager.get_entity_at(target_pos)
 				if target is BeltCell: ent.output_belts[i] = target
-				
 		elif ent is Merger:
 			var target_pos = ent.grid_position + GridSettings.get_direction_vector(ent.direction)
 			var target = grid_manager.get_entity_at(target_pos)
 			if target is BeltCell: ent.output_belt = target
-			
 		elif ent is Smelter:
 			var target = grid_manager.get_entity_at(ent.output_port_pos)
 			if target is BeltCell: ent.output_belt = target
-			
 		elif ent is Assembler:
 			for out_port in ent.global_output_ports:
 				var target = grid_manager.get_entity_at(out_port)
 				if target is BeltCell:
 					ent.output_belts.append(target)
-
 	simulation._sort_belts_topologically()
 
 func _reconnect_all() -> void:
