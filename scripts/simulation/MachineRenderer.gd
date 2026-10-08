@@ -11,6 +11,7 @@ func _draw() -> void:
 		return
 		
 	var cell_size: float = float(GridSettings.CELL_SIZE)
+	var default_font = ThemeDB.fallback_font
 	
 	for drill in main_node.drills:
 		var center = GridSettings.grid_to_world(drill.grid_position)
@@ -28,7 +29,6 @@ func _draw() -> void:
 		draw_circle(in_pos, 3.0, Color.BLUE)
 		draw_circle(out_pos, 3.0, Color.RED)
 		
-	var default_font = ThemeDB.fallback_font
 	for chest in main_node.chests:
 		var center = GridSettings.grid_to_world(chest.grid_position)
 		draw_rect(Rect2(center, Vector2(cell_size, cell_size)), Color.FOREST_GREEN, true)
@@ -39,13 +39,31 @@ func _draw() -> void:
 	for splitter in main_node.splitters:
 		var center = GridSettings.grid_to_world(splitter.grid_position)
 		draw_rect(Rect2(center, Vector2(cell_size, cell_size)), Color.CYAN, true)
-		# Indicador visual del Divisor
 		draw_circle(center + Vector2(cell_size/2, cell_size/2), 6.0, Color.DARK_CYAN)
 		
 	for merger in main_node.mergers:
 		var center = GridSettings.grid_to_world(merger.grid_position)
 		draw_rect(Rect2(center, Vector2(cell_size, cell_size)), Color.MAGENTA, true)
-		# Indicador visual de la Unión
 		var p1 = center + Vector2(4, 4)
 		var p2 = center + Vector2(cell_size - 4, cell_size - 4)
 		draw_line(p1, p2, Color.PURPLE, 3.0)
+		
+	# DIBUJAR ENSAMBLADORAS (Multi-Tile)
+	for assembler in main_node.assemblers:
+		var top_left = GridSettings.grid_to_world(assembler.grid_position)
+		var pixel_size = Vector2(assembler.current_size.x * cell_size, assembler.current_size.y * cell_size)
+		
+		var color = Color.ROYAL_BLUE if assembler.is_working else Color.DARK_BLUE
+		draw_rect(Rect2(top_left, pixel_size), color, true)
+		draw_rect(Rect2(top_left, pixel_size), Color.LIGHT_BLUE, false, 2.0)
+		
+		# Dibujar texto de estado (Opcional)
+		draw_string(default_font, top_left + Vector2(10, 20), "3x3", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color.WHITE)
+		
+		# Dibujar puertos para depuración
+		for in_port in assembler.global_input_ports:
+			var port_center = GridSettings.grid_to_world(in_port) + Vector2(cell_size/2, cell_size/2)
+			draw_circle(port_center, 4.0, Color.BLUE)
+		for out_port in assembler.global_output_ports:
+			var port_center = GridSettings.grid_to_world(out_port) + Vector2(cell_size/2, cell_size/2)
+			draw_circle(port_center, 4.0, Color.RED)

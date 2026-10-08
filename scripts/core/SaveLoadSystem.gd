@@ -5,26 +5,17 @@ const SAVE_PATH: String = "user://factory_save.json"
 
 static func save_game(main: Main) -> void:
 	var data: Dictionary = {
-		"belts": [],
-		"drills": [],
-		"smelters": [],
-		"chests": [],
-		"splitters": [],
-		"mergers": []
+		"belts": [], "drills": [], "smelters": [],
+		"chests": [], "splitters": [], "mergers": [], "assemblers": []
 	}
 	
-	for belt in main.belts:
-		data.belts.append({"x": belt.grid_position.x, "y": belt.grid_position.y, "dir": belt.direction})
-	for drill in main.drills:
-		data.drills.append({"x": drill.grid_position.x, "y": drill.grid_position.y, "dir": drill.direction})
-	for smelter in main.smelters:
-		data.smelters.append({"x": smelter.grid_position.x, "y": smelter.grid_position.y, "dir": smelter.direction})
-	for chest in main.chests:
-		data.chests.append({"x": chest.grid_position.x, "y": chest.grid_position.y, "inventory": chest.current_total})
-	for splitter in main.splitters:
-		data.splitters.append({"x": splitter.grid_position.x, "y": splitter.grid_position.y, "dir": splitter.direction})
-	for merger in main.mergers:
-		data.mergers.append({"x": merger.grid_position.x, "y": merger.grid_position.y, "dir": merger.direction})
+	for belt in main.belts: data.belts.append({"x": belt.grid_position.x, "y": belt.grid_position.y, "dir": belt.direction})
+	for drill in main.drills: data.drills.append({"x": drill.grid_position.x, "y": drill.grid_position.y, "dir": drill.direction})
+	for smelter in main.smelters: data.smelters.append({"x": smelter.grid_position.x, "y": smelter.grid_position.y, "dir": smelter.direction})
+	for chest in main.chests: data.chests.append({"x": chest.grid_position.x, "y": chest.grid_position.y, "inventory": chest.current_total})
+	for splitter in main.splitters: data.splitters.append({"x": splitter.grid_position.x, "y": splitter.grid_position.y, "dir": splitter.direction})
+	for merger in main.mergers: data.mergers.append({"x": merger.grid_position.x, "y": merger.grid_position.y, "dir": merger.direction})
+	for assembler in main.assemblers: data.assemblers.append({"x": assembler.grid_position.x, "y": assembler.grid_position.y, "dir": assembler.direction})
 		
 	var file = FileAccess.open(SAVE_PATH, FileAccess.WRITE)
 	if file:
@@ -32,19 +23,15 @@ static func save_game(main: Main) -> void:
 		file.close()
 
 static func load_game(main: Main) -> void:
-	if not FileAccess.file_exists(SAVE_PATH):
-		return
-		
+	if not FileAccess.file_exists(SAVE_PATH): return
 	var file = FileAccess.open(SAVE_PATH, FileAccess.READ)
 	if not file: return
-	
 	var content = file.get_as_text()
 	file.close()
 	
 	var data = JSON.parse_string(content)
 	if data == null: return
 	
-	# 1. Limpiar el mundo
 	main.grid_manager.clear_grid()
 	main.belts.clear()
 	main.drills.clear()
@@ -52,9 +39,9 @@ static func load_game(main: Main) -> void:
 	main.chests.clear()
 	main.splitters.clear()
 	main.mergers.clear()
+	main.assemblers.clear()
 	main.simulation._belts.clear()
 	
-	# 2. Reinstanciar
 	if data.has("belts"):
 		for b in data.belts:
 			var belt = BeltCell.new(Vector2i(int(b.x), int(b.y)), int(b.dir) as GridSettings.Direction)
@@ -93,5 +80,12 @@ static func load_game(main: Main) -> void:
 			main.grid_manager.occupy_cell(merger.grid_position, merger)
 			main.mergers.append(merger)
 			
-	# 3. Reconectar grafos usando el método optimizado (o total para inicialización)
+	if data.has("assemblers"):
+		for a in data.assemblers:
+			var size = GridSettings.get_rotated_size(Vector2i(3,3), int(a.dir) as GridSettings.Direction)
+			var assembler = Assembler.new(Vector2i(int(a.x), int(a.y)), int(a.dir) as GridSettings.Direction)
+			assembler.active_recipe = main.debug_recipe
+			main.grid_manager.occupy_area(assembler.grid_position, size, assembler)
+			main.assemblers.append(assembler)
+			
 	main._reconnect_all()

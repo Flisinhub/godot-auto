@@ -11,7 +11,8 @@ enum BuildMode {
 	CHEST = 4,
 	DEMOLISH = 5,
 	SPLITTER = 6,
-	MERGER = 7
+	MERGER = 7,
+	ASSEMBLER = 8
 }
 
 func _input(event: InputEvent) -> void:
@@ -24,4 +25,5 @@ func _input(event: InputEvent) -> void:
 			KEY_5: mode_changed.emit(BuildMode.DEMOLISH)
 			KEY_6: mode_changed.emit(BuildMode.SPLITTER)
 			KEY_7: mode_changed.emit(BuildMode.MERGER)
+			KEY_8: mode_changed.emit(BuildMode.ASSEMBLER)
 			KEY_ESCAPE: mode_changed.emit(BuildMode.NONE)
