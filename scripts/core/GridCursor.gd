@@ -91,29 +91,39 @@ func _draw_ghost(rect: Rect2, base_color: Color, mode: int, dir: GridSettings.Di
 	
 	match mode:
 		1: # BELT
-			draw_rect(rect, Color(0.5, 0.5, 0.5, 0.5), true)
-			draw_line(center - dir_vec * (half * 0.5), center + dir_vec * (half * 0.5), base_color, 2.0)
+			draw_rect(rect, Color(0.2, 0.2, 0.2, 0.5), true)
+			var p1 = center + dir_vec * (half * 0.4)
+			var p2 = center - dir_vec * (half * 0.2) + dir_vec.orthogonal() * (half * 0.4)
+			var p3 = center - dir_vec * (half * 0.2) - dir_vec.orthogonal() * (half * 0.4)
+			draw_polygon(PackedVector2Array([p1, p2, p3]), PackedColorArray([color]))
 		2: # DRILL
-			draw_rect(rect, Color(1.0, 1.0, 0.0, 0.3), true)
+			draw_rect(rect, Color(0.6, 0.6, 0.1, 0.5), true)
+			draw_circle(center, half * 0.4, Color(0.4, 0.4, 0.4, 0.8))
+			var arr1 = center + dir_vec * half
+			draw_line(center, arr1, Color.YELLOW, 3.0)
 		3: # SMELTER
-			draw_rect(rect, Color(1.0, 0.5, 0.0, 0.3), true)
+			draw_rect(rect, Color.CORAL.darkened(0.3) * Color(1,1,1,0.5), true)
+			draw_circle(center, half * 0.4, Color.ORANGE_RED * 0.8)
 		4: # CHEST
-			draw_rect(rect, Color(0.0, 0.5, 0.0, 0.3), true)
+			draw_rect(rect, Color.SADDLE_BROWN * Color(1,1,1,0.5), true)
+			draw_rect(Rect2(center - Vector2(half*0.5, half*0.5), Vector2(half, half)), Color.DARK_GOLDENROD * Color(1,1,1,0.5), true)
 		5: # DEMOLISH
 			draw_line(rect.position, rect.position + rect.size, Color.RED, 3.0)
 			draw_line(rect.position + Vector2(rect.size.x, 0), rect.position + Vector2(0, rect.size.y), Color.RED, 3.0)
 		6: # SPLITTER
-			draw_rect(rect, Color(0.0, 1.0, 1.0, 0.3), true)
+			draw_rect(rect, Color.CYAN * Color(1,1,1,0.5), true)
 		7: # MERGER
-			draw_rect(rect, Color(1.0, 0.0, 1.0, 0.3), true)
+			draw_rect(rect, Color.MAGENTA * Color(1,1,1,0.5), true)
 		8: # ASSEMBLER
-			draw_rect(rect, Color(0.0, 0.0, 1.0, 0.3), true)
-			draw_circle(center, 12.0, Color(1, 1, 1, 0.5))
+			draw_rect(rect, Color.ROYAL_BLUE.darkened(0.4) * Color(1,1,1,0.5), true)
+			draw_circle(center, half * 0.5, Color.DARK_SLATE_BLUE * Color(1,1,1,0.5))
+			var arr3 = center + dir_vec * half
+			draw_line(center, arr3, Color.WHITE, 4.0)
 		9: # LABORATORY
-			draw_rect(rect, Color(0.5, 0.0, 0.5, 0.3), true)
-			draw_circle(center, 10.0, Color(1, 1, 1, 0.5))
+			draw_rect(rect, Color.PURPLE.darkened(0.4) * Color(1,1,1,0.5), true)
+			draw_circle(center, half * 0.4, Color.PURPLE * Color(1,1,1,0.5))
 		10: # INSERTER
-			draw_rect(rect, Color(1.0, 1.0, 0.0, 0.3), true)
+			draw_rect(rect, Color(0.8, 0.8, 0.1, 0.3), true)
 			draw_line(center - dir_vec * (half * 0.8), center + dir_vec * (half * 0.8), Color.WHITE, 3.0)
 			draw_circle(center + dir_vec * (half * 0.8), 4.0, Color.YELLOW)
 		_:

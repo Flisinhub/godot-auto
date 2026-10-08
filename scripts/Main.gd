@@ -41,6 +41,9 @@ var iron_gear: ItemData
 var player_inventory: Dictionary = {}
 var build_costs: Dictionary = {}
 
+var is_dragging_build: bool = false
+var last_drag_cell: Vector2i = Vector2i(-999, -999)
+
 func _ready() -> void:
 	# Estilizar el HUD base
 	var style = StyleBoxFlat.new()
@@ -174,8 +177,27 @@ func _input(event: InputEvent) -> void:
 			KEY_F10: SaveLoadSystem.load_game(self)
 		_update_ui_text()
 		
-	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.is_pressed():
-		_handle_click(get_global_mouse_position())
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+		if event.is_pressed():
+			is_dragging_build = true
+			last_drag_cell = GridSettings.world_to_grid(get_global_mouse_position())
+			_handle_click(get_global_mouse_position())
+		else:
+			is_dragging_build = false
+			
+	if event is InputEventMouseMotion and is_dragging_build:
+		var current_cell = GridSettings.world_to_grid(get_global_mouse_position())
+		if current_cell != last_drag_cell:
+			# Auto-rotación inteligente para cintas transportadoras
+			if current_mode == BuildToolbar.BuildMode.BELT:
+				var diff = current_cell - last_drag_cell
+				if diff == Vector2i(1, 0): current_rotation = GridSettings.Direction.RIGHT
+				elif diff == Vector2i(-1, 0): current_rotation = GridSettings.Direction.LEFT
+				elif diff == Vector2i(0, 1): current_rotation = GridSettings.Direction.DOWN
+				elif diff == Vector2i(0, -1): current_rotation = GridSettings.Direction.UP
+				
+			last_drag_cell = current_cell
+			_handle_click(get_global_mouse_position())
 
 func _get_item_by_id(item_id: StringName) -> ItemData:
 	if item_id == &"iron_ore": return iron_ore
