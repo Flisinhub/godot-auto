@@ -9,6 +9,7 @@ var grid_manager: GridManager = GridManager.new()
 @onready var simulation: FactorySimulation = $FactorySimulation
 @onready var resource_map: ResourceMap = $ResourceMap
 @onready var ui_label: Label = $UI/Instructions
+@onready var ui_panel: Panel = $UI/Panel
 @onready var machine_renderer: Node2D = $MachineRenderer
 @onready var belt_renderer: BeltRenderer = $BeltRenderer
 @onready var cursor: GridCursor = $GridCursor
@@ -27,6 +28,7 @@ var inserters: Array[Inserter] = []
 var all_recipes: Array[RecipeData] = []
 var machine_ui: MachineUI
 var tech_ui: TechUI
+var inventory_ui: InventoryUI
 var tech_manager: TechManager
 
 var iron_ore: ItemData
@@ -40,6 +42,14 @@ var player_inventory: Dictionary = {}
 var build_costs: Dictionary = {}
 
 func _ready() -> void:
+	# Estilizar el HUD base
+	var style = StyleBoxFlat.new()
+	style.bg_color = Color(0.05, 0.05, 0.08, 0.9)
+	style.border_width_left = 2; style.border_width_top = 2
+	style.border_color = Color(0.4, 0.4, 0.4, 0.5)
+	style.corner_radius_bottom_right = 10
+	ui_panel.add_theme_stylebox_override("panel", style)
+	
 	var ground = GroundRenderer.new()
 	add_child(ground)
 	
@@ -60,6 +70,10 @@ func _ready() -> void:
 	tech_ui = TechUI.new()
 	add_child(tech_ui)
 	tech_ui.setup(tech_manager)
+	
+	inventory_ui = InventoryUI.new()
+	inventory_ui.main_node = self
+	add_child(inventory_ui)
 	
 	simulation.simulation_ticked.connect(_on_simulation_ticked)
 	_setup_materials_and_recipes()
@@ -154,6 +168,7 @@ func _input(event: InputEvent) -> void:
 			KEY_9: current_mode = BuildToolbar.BuildMode.LABORATORY
 			KEY_0: current_mode = BuildToolbar.BuildMode.INSERTER
 			KEY_T: tech_ui.toggle_ui()
+			KEY_TAB: inventory_ui.toggle()
 			KEY_R: current_rotation = (current_rotation + 1) % 4 as GridSettings.Direction
 			KEY_F9: SaveLoadSystem.save_game(self)
 			KEY_F10: SaveLoadSystem.load_game(self)
@@ -195,11 +210,10 @@ func _update_ui_text() -> void:
 		for item in build_costs[current_mode].keys():
 			cost_text += "- " + item.item_name + ": " + str(build_costs[current_mode][item]) + "\n"
 
-	var inv_text = "--- INVENTARIO JUGADOR ---\n"
-	for item in player_inventory.keys():
-		inv_text += item.item_name + ": " + str(player_inventory[item]) + "\n"
-
-	ui_label.text = "Modo: %s\n\n%s\n%s\nCONTROLES:\nESC: Select/Loot | 1-0: Construir\nT: Arbol Tecnología | 5: Demoler\nR: Rotar | F9/F10: Guardar" % [mode_name, cost_text, inv_text]
+	ui_label.text = "Modo: %s\n\n%s\n\nCONTROLES:\nESC: Select/Loot | 1-0: Construir\nT: Tecnología | TAB: Inventario | 5: Demoler\nR: Rotar | F9/F10: Guardar" % [mode_name, cost_text]
+	
+	if inventory_ui.panel.visible:
+		inventory_ui.refresh()
 
 func _can_afford(mode: BuildToolbar.BuildMode) -> bool:
 	if mode == BuildToolbar.BuildMode.SPLITTER or mode == BuildToolbar.BuildMode.MERGER:

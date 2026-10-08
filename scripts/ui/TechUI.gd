@@ -69,8 +69,17 @@ func refresh_list() -> void:
 
 func _create_tech_entry(tech: TechData) -> void:
 	var bg = PanelContainer.new()
+	
+	var style = StyleBoxFlat.new()
+	style.bg_color = Color(0.1, 0.15, 0.25, 0.8)
+	style.border_width_left = 3
+	style.border_color = Color.AQUA
+	style.corner_radius_top_right = 5
+	style.corner_radius_bottom_right = 5
+	bg.add_theme_stylebox_override("panel", style)
+	
 	var margin = MarginContainer.new()
-	margin.add_theme_constant_override("margin_left", 10)
+	margin.add_theme_constant_override("margin_left", 15)
 	margin.add_theme_constant_override("margin_top", 10)
 	margin.add_theme_constant_override("margin_bottom", 10)
 	bg.add_child(margin)
@@ -80,43 +89,77 @@ func _create_tech_entry(tech: TechData) -> void:
 	
 	var name_lbl = Label.new()
 	name_lbl.text = tech.tech_name
+	name_lbl.add_theme_font_size_override("font_size", 16)
+	name_lbl.add_theme_color_override("font_color", Color.CYAN)
+	name_lbl.add_theme_constant_override("outline_size", 3)
+	name_lbl.add_theme_color_override("font_outline_color", Color(0,0,0,1))
 	vbox.add_child(name_lbl)
 	
 	var desc_lbl = Label.new()
 	desc_lbl.text = tech.description
+	desc_lbl.add_theme_font_size_override("font_size", 12)
 	desc_lbl.add_theme_color_override("font_color", Color.LIGHT_GRAY)
 	vbox.add_child(desc_lbl)
 	
-	var cost_lbl = Label.new()
-	var cost_text = "Coste: "
+	var hbox_cost = HBoxContainer.new()
+	vbox.add_child(hbox_cost)
+	
+	var cost_title = Label.new()
+	cost_title.text = "Coste: "
+	cost_title.add_theme_font_size_override("font_size", 12)
+	hbox_cost.add_child(cost_title)
+	
 	for item in tech.cost.keys():
 		var req = tech.cost[item]
 		var cur = tech_manager.research_progress.get(item.id, 0)
+		
+		var slot = Panel.new()
+		slot.custom_minimum_size = Vector2(30, 30)
+		var s_style = StyleBoxFlat.new()
+		s_style.bg_color = Color(0,0,0,0.5)
+		s_style.corner_radius_all = 3
+		slot.add_theme_stylebox_override("panel", s_style)
+		
+		var icon = ItemIconControl.new()
+		icon.item = item
+		icon.size = Vector2(20, 20)
+		icon.position = Vector2(5, 5)
+		slot.add_child(icon)
+		
+		var amt = Label.new()
 		if tech_manager.active_research == tech.id:
-			cost_text += str(cur) + "/" + str(req) + " " + item.item_name + ", "
+			amt.text = str(cur) + "/" + str(req)
 		else:
-			cost_text += str(req) + " " + item.item_name + ", "
-	cost_lbl.text = cost_text
-	cost_lbl.add_theme_color_override("font_color", Color.YELLOW)
-	vbox.add_child(cost_lbl)
+			amt.text = str(req)
+		amt.position = Vector2(35, 5)
+		amt.add_theme_font_size_override("font_size", 12)
+		amt.add_theme_color_override("font_color", Color.YELLOW)
+		
+		var p2 = Control.new()
+		p2.custom_minimum_size = Vector2(40 + amt.text.length()*8, 30)
+		p2.add_child(slot)
+		p2.add_child(amt)
+		hbox_cost.add_child(p2)
 	
 	var btn = Button.new()
+	btn.custom_minimum_size = Vector2(0, 30)
 	if tech_manager.is_unlocked(tech.id):
-		btn.text = "Completado"
+		btn.text = "COMPLETADO"
 		btn.disabled = true
-		bg.modulate = Color(0.5, 1.0, 0.5)
+		style.border_color = Color.GREEN
+		style.bg_color = Color(0.1, 0.25, 0.1, 0.8)
 	elif tech_manager.active_research == tech.id:
-		btn.text = "Investigando..."
+		btn.text = "INVESTIGANDO..."
 		btn.disabled = true
-		bg.modulate = Color(1.0, 1.0, 0.5)
+		style.border_color = Color.YELLOW
+		style.bg_color = Color(0.25, 0.25, 0.1, 0.8)
 	else:
-		btn.text = "Iniciar Investigacion"
+		btn.text = "INICIAR INVESTIGACIÓN"
 		btn.pressed.connect(func(): tech_manager.start_research(tech.id); refresh_list())
 		
 	vbox.add_child(btn)
 	main_container.add_child(bg)
 
 func _process(_delta: float) -> void:
-	# Refrescar barra de progreso si estamos investigando y el panel está abierto
 	if is_open and tech_manager != null and tech_manager.active_research != "":
 		refresh_list()
