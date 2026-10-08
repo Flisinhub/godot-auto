@@ -12,6 +12,15 @@ func _ready() -> void:
 	layer = 20 # Por encima del resto
 	
 	panel = Panel.new()
+	var style = StyleBoxFlat.new()
+	style.bg_color = Color(0.05, 0.05, 0.1, 0.9)
+	style.border_width_left = 2; style.border_width_right = 2
+	style.border_width_top = 2; style.border_width_bottom = 2
+	style.border_color = Color.AQUA.darkened(0.5)
+	style.corner_radius_top_left = 5; style.corner_radius_top_right = 5
+	style.corner_radius_bottom_left = 5; style.corner_radius_bottom_right = 5
+	panel.add_theme_stylebox_override("panel", style)
+	
 	panel.size = Vector2(400, 500)
 	panel.position = Vector2(440, 100) # Centro aprox de una pantalla HD
 	panel.visible = false

@@ -119,8 +119,9 @@ func _draw() -> void:
 		# Animación: Núcleo incandescente palpitando
 		if smelter.is_working:
 			var pulse = sin(time * 8.0) * 0.2 + 0.8
-			draw_circle(m_center, cell_size * 0.3 * pulse, Color.ORANGE_RED)
-			draw_circle(m_center, cell_size * 0.15 * pulse, Color.YELLOW)
+			# Multiplicadores HDR (>1.0) activan el Glow
+			draw_circle(m_center, cell_size * 0.3 * pulse, Color.ORANGE_RED * 1.5)
+			draw_circle(m_center, cell_size * 0.15 * pulse, Color.YELLOW * 2.5)
 		else:
 			draw_circle(m_center, cell_size * 0.3, Color.DARK_GRAY)
 			
@@ -192,8 +193,8 @@ func _draw() -> void:
 		# Animación: Domo de energía
 		if lab.is_working:
 			var pulse = fmod(time * 2.0, 1.0) # 0 to 1 repeatedly
-			draw_circle(m_center, (cell_size * 0.8) * pulse, Color(0.8, 0.2, 1.0, 1.0 - pulse))
-			draw_circle(m_center, cell_size * 0.4, Color.MEDIUM_PURPLE)
+			draw_circle(m_center, (cell_size * 0.8) * pulse, Color(0.8, 0.2, 1.0, 1.0 - pulse) * 1.5)
+			draw_circle(m_center, cell_size * 0.4, Color.MEDIUM_PURPLE * 2.0)
 		else:
 			draw_circle(m_center, cell_size * 0.4, Color.DARK_PURPLE)
 			

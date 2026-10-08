@@ -16,6 +16,15 @@ func _ready() -> void:
 	layer = 10 # Asegurar que dibuja por encima del juego
 	
 	panel = Panel.new()
+	var style = StyleBoxFlat.new()
+	style.bg_color = Color(0.1, 0.1, 0.1, 0.9)
+	style.border_width_left = 2; style.border_width_right = 2
+	style.border_width_top = 2; style.border_width_bottom = 2
+	style.border_color = Color.ORANGE.darkened(0.5)
+	style.corner_radius_top_left = 5; style.corner_radius_top_right = 5
+	style.corner_radius_bottom_left = 5; style.corner_radius_bottom_right = 5
+	panel.add_theme_stylebox_override("panel", style)
+	
 	panel.size = Vector2(300, 400)
 	panel.position = Vector2(800, 50) # Lado derecho
 	panel.visible = false

@@ -42,6 +42,9 @@ func _ready() -> void:
 	var ground = GroundRenderer.new()
 	add_child(ground)
 	
+	var atmosphere = AtmosphereSystem.new()
+	add_child(atmosphere)
+	
 	cursor.main_node = self
 	machine_renderer.main_node = self
 	
