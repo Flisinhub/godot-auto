@@ -13,6 +13,14 @@ func _draw_direction_arrow(center: Vector2, dir: GridSettings.Direction, size: f
 	draw_line(start, end, color, 3.0)
 	draw_circle(end, 3.0, color)
 
+## Dibuja una pequeña barra de progreso estilo UI sobre la máquina
+func _draw_progress_bar(center: Vector2, progress: float, width: float) -> void:
+	var bar_h = 4.0
+	var bg_rect = Rect2(center.x - width/2.0, center.y + width/2.0 - bar_h - 2.0, width, bar_h)
+	draw_rect(bg_rect, Color.BLACK, true)
+	var fg_rect = Rect2(bg_rect.position, Vector2(width * progress, bar_h))
+	draw_rect(fg_rect, Color.GREEN, true)
+
 func _draw() -> void:
 	if main_node == null:
 		return
@@ -22,10 +30,9 @@ func _draw() -> void:
 	
 	for drill in main_node.drills:
 		var center = GridSettings.grid_to_world(drill.grid_position)
-		var color = Color.YELLOW if drill.is_working else Color.DARK_RED
+		var color = Color(0.8, 0.8, 0.1) if drill.is_working else Color.DARK_RED
 		draw_rect(Rect2(center, Vector2(cell_size, cell_size)), color, true)
 		
-		# Flecha apuntando a dónde exporta el Extractor
 		var arrow_center = center + Vector2(cell_size/2, cell_size/2)
 		_draw_direction_arrow(arrow_center, drill.direction, cell_size, Color.BLACK)
 			
@@ -34,9 +41,12 @@ func _draw() -> void:
 		var color = Color.CORAL if smelter.is_working else Color.DIM_GRAY
 		draw_rect(Rect2(center, Vector2(cell_size, cell_size)), color, true)
 		
-		# Flecha enorme en el medio de la Fundición mostrando hacia dónde procesa
-		var arrow_center = center + Vector2(cell_size/2, cell_size/2)
-		_draw_direction_arrow(arrow_center, smelter.direction, cell_size, Color.WHITE)
+		var m_center = center + Vector2(cell_size/2, cell_size/2)
+		_draw_direction_arrow(m_center, smelter.direction, cell_size, Color.WHITE)
+		
+		if smelter.is_working and smelter.active_recipe != null:
+			var prog = float(smelter._current_ticks) / float(smelter.active_recipe.processing_ticks)
+			_draw_progress_bar(m_center, prog, cell_size * 0.8)
 		
 	for chest in main_node.chests:
 		var center = GridSettings.grid_to_world(chest.grid_position)
@@ -67,11 +77,13 @@ func _draw() -> void:
 		
 		draw_string(default_font, top_left + Vector2(10, 20), "ENSAMBLADORA", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color.WHITE)
 		
-		# Flecha en el centro
-		var arrow_center = top_left + pixel_size / 2.0
-		_draw_direction_arrow(arrow_center, assembler.direction, cell_size * 1.5, Color.WHITE)
+		var m_center = top_left + pixel_size / 2.0
+		_draw_direction_arrow(m_center, assembler.direction, cell_size * 1.5, Color.WHITE)
 		
-		# Dibujar puertos de colores en el borde de la máquina
+		if assembler.is_working and assembler.active_recipe != null:
+			var prog = float(assembler._current_ticks) / float(assembler.active_recipe.processing_ticks)
+			_draw_progress_bar(m_center, prog, pixel_size.x * 0.8)
+		
 		for in_port in assembler.global_input_ports:
 			var port_center = GridSettings.grid_to_world(in_port) + Vector2(cell_size/2, cell_size/2)
 			draw_circle(port_center, 6.0, Color.BLUE)
