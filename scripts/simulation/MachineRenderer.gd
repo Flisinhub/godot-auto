@@ -3,7 +3,24 @@ extends Node2D
 
 @export var main_node: Main
 
-func _process(_delta: float) -> void:
+var smoke_particles: Array[Dictionary] = []
+
+func _process(delta: float) -> void:
+	# Actualizar humo de fundiciones
+	for p in smoke_particles:
+		p.life -= delta
+		p.pos += p.vel * delta
+	smoke_particles = smoke_particles.filter(func(p): return p.life > 0)
+	
+	if main_node != null:
+		for s in main_node.smelters:
+			if s.is_working and randf() < 0.15:
+				var c = GridSettings.grid_to_world(s.grid_position) + Vector2(GridSettings.CELL_SIZE/2, GridSettings.CELL_SIZE/2)
+				smoke_particles.append({
+					"pos": c + Vector2(randf_range(-10, 10), -10),
+					"vel": Vector2(randf_range(-15, 15), -40),
+					"life": 1.5, "max_life": 1.5
+				})
 	queue_redraw()
 
 func _draw_direction_arrow(center: Vector2, dir: GridSettings.Direction, size: float, color: Color) -> void:
@@ -63,6 +80,23 @@ func _draw() -> void:
 	var default_font = ThemeDB.fallback_font
 	var time = float(Time.get_ticks_msec()) / 1000.0
 	
+	# --- FASE 0: SOMBRAS GLOBALES ---
+	var shadow_color = Color(0, 0, 0, 0.4)
+	var s_off = Vector2(5, 5)
+	
+	for drill in main_node.drills: draw_rect(Rect2(GridSettings.grid_to_world(drill.grid_position) + s_off, Vector2(cell_size, cell_size)), shadow_color)
+	for smelter in main_node.smelters: draw_rect(Rect2(GridSettings.grid_to_world(smelter.grid_position) + s_off, Vector2(cell_size, cell_size)), shadow_color)
+	for chest in main_node.chests: draw_rect(Rect2(GridSettings.grid_to_world(chest.grid_position) + s_off, Vector2(cell_size, cell_size)), shadow_color)
+	for splitter in main_node.splitters: draw_rect(Rect2(GridSettings.grid_to_world(splitter.grid_position) + s_off, Vector2(cell_size, cell_size)), shadow_color)
+	for merger in main_node.mergers: draw_rect(Rect2(GridSettings.grid_to_world(merger.grid_position) + s_off, Vector2(cell_size, cell_size)), shadow_color)
+	for asm in main_node.assemblers: 
+		var size = Vector2(asm.current_size.x, asm.current_size.y) * cell_size
+		draw_rect(Rect2(GridSettings.grid_to_world(asm.grid_position) + s_off, size), shadow_color)
+	for lab in main_node.laboratories:
+		var size = Vector2(lab.current_size.x, lab.current_size.y) * cell_size
+		draw_rect(Rect2(GridSettings.grid_to_world(lab.grid_position) + s_off, size), shadow_color)
+	
+	# --- FASE 1: DIBUJO NORMAL DE MÁQUINAS ---
 	for drill in main_node.drills:
 		var center = GridSettings.grid_to_world(drill.grid_position)
 		var m_center = center + Vector2(cell_size/2, cell_size/2)
@@ -177,13 +211,27 @@ func _draw() -> void:
 		var target_pos = m_center + dir_vec * (cell_size * 0.6)
 		var source_pos = m_center - dir_vec * (cell_size * 0.6)
 		
-		# El brazo apunta al target si tiene objeto, o al source si está buscando
-		var arm_pos = target_pos if ins.held_item != null else source_pos
+		var is_extended = ins.held_item != null
+		var arm_pos = target_pos if is_extended else source_pos
 		
-		draw_line(m_center, arm_pos, Color.ORANGE, 4.0)
+		# Cinemática inversa falsa (Codo del brazo articulado)
+		var mid_point = (m_center + arm_pos) / 2.0
+		var ortho = Vector2(-dir_vec.y, dir_vec.x)
+		var elbow = mid_point + ortho * (12.0 if is_extended else -12.0)
+		
+		# Brazo articulado
+		draw_line(m_center, elbow, Color.ORANGE, 5.0)
+		draw_line(elbow, arm_pos, Color.DARK_ORANGE, 4.0)
+		
+		# Articulaciones (Círculos)
+		draw_circle(elbow, 4.0, Color.DARK_GRAY)
 		draw_circle(arm_pos, 4.0, Color.YELLOW)
 		
-		# Dibujar el objeto que tiene agarrado
-		if ins.held_item != null and ins.held_item.texture != null:
-			var item_rect = Rect2(arm_pos - Vector2(8, 8), Vector2(16, 16))
-			draw_texture_rect(ins.held_item.texture, item_rect, false)
+		# Dibujar el objeto agarrado geométricamente
+		if ins.held_item != null:
+			ItemData.draw_icon(self, arm_pos, 6.0, ins.held_item)
+			
+	# --- FASE 2: EFECTOS DE PARTÍCULAS (Humo) ---
+	for p in smoke_particles:
+		var alpha = p.life / p.max_life
+		draw_circle(p.pos, 4.0 + (1.0 - alpha) * 8.0, Color(0.5, 0.5, 0.5, alpha * 0.6))

@@ -59,19 +59,20 @@ func _ready() -> void:
 	_generate_ore_veins()
 	_update_ui_text()
 
-func _create_item(id_name: String, human_name: String, c1: Color, c2: Color) -> ItemData:
+func _create_item(id_name: String, human_name: String, c1: Color, c2: Color, i_type: String) -> ItemData:
 	var item = ItemData.new(); item.id = id_name; item.item_name = human_name
+	item.color = c1; item.type = i_type
 	var tex = GradientTexture2D.new(); tex.width = 16; tex.height = 16
 	var grad = Gradient.new(); grad.colors = PackedColorArray([c1, c2])
 	tex.gradient = grad; item.texture = tex
 	return item
 
 func _setup_materials_and_recipes() -> void:
-	iron_ore = _create_item("iron_ore", "Mena de Hierro", Color.SLATE_GRAY, Color.LIGHT_SLATE_GRAY)
-	iron_ingot = _create_item("iron_ingot", "Lingote de Hierro", Color.DARK_ORANGE, Color.ORANGE)
-	copper_ore = _create_item("copper_ore", "Mena de Cobre", Color.SADDLE_BROWN, Color.PERU)
-	copper_ingot = _create_item("copper_ingot", "Lingote de Cobre", Color.CORAL, Color.LIGHT_CORAL)
-	iron_gear = _create_item("iron_gear", "Engranaje", Color.DARK_GRAY, Color.GRAY)
+	iron_ore = _create_item("iron_ore", "Mena de Hierro", Color.SLATE_GRAY, Color.LIGHT_SLATE_GRAY, "ore")
+	iron_ingot = _create_item("iron_ingot", "Lingote de Hierro", Color.SILVER, Color.WHITE, "ingot")
+	copper_ore = _create_item("copper_ore", "Mena de Cobre", Color.SADDLE_BROWN, Color.PERU, "ore")
+	copper_ingot = _create_item("copper_ingot", "Lingote de Cobre", Color.CORAL, Color.LIGHT_CORAL, "ingot")
+	iron_gear = _create_item("iron_gear", "Engranaje", Color.DARK_GRAY, Color.GRAY, "gear")
 	
 	var r_iron = RecipeData.new(); r_iron.id = "smelt_iron"; r_iron.processing_ticks = 5
 	r_iron.inputs[iron_ore] = 1; r_iron.outputs[iron_ingot] = 1
