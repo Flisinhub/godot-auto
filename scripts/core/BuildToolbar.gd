@@ -4,15 +4,16 @@ extends Control
 signal mode_changed(new_mode: BuildMode)
 
 enum BuildMode {
-	NONE,
-	BELT,
-	DRILL,
-	SMELTER,
-	CHEST,
-	DEMOLISH
+	NONE = 0,
+	BELT = 1,
+	DRILL = 2,
+	SMELTER = 3,
+	CHEST = 4,
+	DEMOLISH = 5,
+	SPLITTER = 6,
+	MERGER = 7
 }
 
-## Bucle de entrada para cambiar modos de construcción vía teclado
 func _input(event: InputEvent) -> void:
 	if event is InputEventKey and event.is_pressed() and not event.is_echo():
 		match event.keycode:
@@ -21,4 +22,6 @@ func _input(event: InputEvent) -> void:
 			KEY_3: mode_changed.emit(BuildMode.SMELTER)
 			KEY_4: mode_changed.emit(BuildMode.CHEST)
 			KEY_5: mode_changed.emit(BuildMode.DEMOLISH)
+			KEY_6: mode_changed.emit(BuildMode.SPLITTER)
+			KEY_7: mode_changed.emit(BuildMode.MERGER)
 			KEY_ESCAPE: mode_changed.emit(BuildMode.NONE)
